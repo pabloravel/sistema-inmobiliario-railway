@@ -97,3 +97,4 @@ ENVIRONMENT=production
 ---
 
 **Desarrollado por Pablo Ravel** - Sistema Inmobiliario Morelos 2025 
+# Railway deployment fix - Wed Jun 19 2025
