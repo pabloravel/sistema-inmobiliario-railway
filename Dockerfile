@@ -9,7 +9,7 @@ LABEL description="Facebook Property Scraper API Server"
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV FLASK_ENV=production
-ENV PORT=5001
+ENV PORT=8000
 
 # Instalar dependencias del sistema
 RUN apt-get update && apt-get install -y \
@@ -54,5 +54,5 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
 # Exponer puerto
 EXPOSE ${PORT}
 
-# Comando de inicio
-CMD ["python3", "api_server_optimizado.py"] 
+# Comando de inicio - usar uvicorn con FastAPI
+CMD ["sh", "-c", "uvicorn api_colaborativa:app --host 0.0.0.0 --port $PORT"]
