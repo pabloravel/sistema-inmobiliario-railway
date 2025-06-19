@@ -1,0 +1,1505 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🏡 Sistema Inmobiliario Colaborativo</title>
+    
+    <style>
+        :root {
+            --primary: #2563eb;
+            --secondary: #64748b;
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --light: #f8fafc;
+            --dark: #1e293b;
+            --border: #e2e8f0;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: var(--light);
+            color: var(--dark);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 1rem;
+        }
+
+        /* Header con autenticación */
+        .header {
+            background: var(--primary);
+            color: white;
+            padding: 1rem 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .header h1 {
+            font-size: 1.5rem;
+        }
+
+        .auth-section {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: rgba(255,255,255,0.1);
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+        }
+
+        .btn {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: var(--secondary);
+            color: white;
+        }
+
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+        }
+
+        .btn:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+
+        /* Navegación */
+        .nav-tabs {
+            background: white;
+            border-bottom: 1px solid var(--border);
+            padding: 0;
+        }
+
+        .nav-tabs ul {
+            list-style: none;
+            display: flex;
+            margin: 0;
+            padding: 0;
+        }
+
+        .nav-tabs li {
+            margin: 0;
+        }
+
+        .nav-tabs button {
+            background: none;
+            border: none;
+            padding: 1rem 1.5rem;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .nav-tabs button.active {
+            border-bottom-color: var(--primary);
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        .nav-tabs button:hover {
+            background: var(--light);
+        }
+
+        /* Contenido principal */
+        .main-content {
+            padding: 2rem 0;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Formularios */
+        .form-container {
+            max-width: 400px;
+            margin: 0 auto;
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 0.9rem;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        /* Grid de propiedades */
+        .properties-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-top: 2rem;
+        }
+
+        .property-card {
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+            transition: transform 0.2s;
+        }
+
+        .property-card:hover {
+            transform: translateY(-2px);
+        }
+
+        .property-image {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+        }
+
+        .property-content {
+            padding: 1rem;
+        }
+
+        .property-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .property-price {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .property-location {
+            color: var(--secondary);
+            margin-bottom: 1rem;
+        }
+
+        .property-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        /* Favoritos */
+        .favorite-btn {
+            background: none;
+            border: 1px solid var(--border);
+            padding: 0.5rem;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .favorite-btn.active {
+            background: var(--danger);
+            color: white;
+            border-color: var(--danger);
+        }
+
+        /* Mensajes */
+        .message {
+            padding: 1rem;
+            border-radius: 6px;
+            margin-bottom: 1rem;
+        }
+
+        .message.success {
+            background: #dcfce7;
+            color: #166534;
+            border: 1px solid #bbf7d0;
+        }
+
+        .message.error {
+            background: #fef2f2;
+            color: #dc2626;
+            border: 1px solid #fecaca;
+        }
+
+        .message.info {
+            background: #dbeafe;
+            color: #1d4ed8;
+            border: 1px solid #93c5fd;
+        }
+
+        /* Loading */
+        .loading {
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            border: 4px solid var(--border);
+            border-radius: 50%;
+            border-top-color: var(--primary);
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+
+        .modal-content {
+            background-color: white;
+            margin: 5% auto;
+            padding: 2rem;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 500px;
+            position: relative;
+        }
+
+        .modal-close {
+            position: absolute;
+            right: 1rem;
+            top: 1rem;
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .header-content {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .nav-tabs ul {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+
+            .properties-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <h1>🏡 Sistema Inmobiliario Colaborativo</h1>
+                
+                <div class="auth-section" id="auth-section">
+                    <!-- Se llena dinámicamente -->
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Navegación -->
+    <nav class="nav-tabs">
+        <div class="container">
+            <ul>
+                <li><button class="tab-btn active" data-tab="propiedades">🏠 Propiedades</button></li>
+                <li><button class="tab-btn" data-tab="login" id="login-tab-btn">🔐 Acceso</button></li>
+                <li><button class="tab-btn" data-tab="register" id="register-tab-btn">📝 Registro</button></li>
+                <li><button class="tab-btn" data-tab="carpetas" style="display: none;" id="carpetas-tab-btn">📁 Carpetas</button></li>
+                <li><button class="tab-btn" data-tab="favoritos" style="display: none;" id="favoritos-tab-btn">❤️ Favoritos</button></li>
+                <li><button class="tab-btn" data-tab="admin" style="display: none;" id="admin-tab-btn">⚙️ Admin</button></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Contenido principal -->
+    <main class="main-content">
+        <div class="container">
+            <!-- Tab: Propiedades -->
+            <div id="tab-propiedades" class="tab-content active">
+                <div class="properties-grid" id="properties-container">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        <p>Cargando propiedades...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab: Login -->
+            <div id="tab-login" class="tab-content">
+                <div class="form-container">
+                    <h2>🔐 Iniciar Sesión</h2>
+                    <form id="login-form">
+                        <div class="form-group">
+                            <label for="login-email">Email</label>
+                            <input type="email" id="login-email" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="login-password">Contraseña</label>
+                            <input type="password" id="login-password" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary" style="width: 100%; margin-bottom: 1rem;">
+                            Iniciar Sesión
+                        </button>
+                        <div style="text-align: center;">
+                            <a href="#" onclick="showRecoveryForm()" style="color: var(--primary);">
+                                ¿Olvidaste tu contraseña?
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Tab: Registro -->
+            <div id="tab-register" class="tab-content">
+                <div class="form-container">
+                    <h2>📝 Crear Cuenta</h2>
+                    <form id="register-form">
+                        <div class="form-group">
+                            <label for="register-nombre">Nombre completo</label>
+                            <input type="text" id="register-nombre" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="register-email">Email</label>
+                            <input type="email" id="register-email" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="register-telefono">Teléfono</label>
+                            <input type="tel" id="register-telefono">
+                        </div>
+                        <div class="form-group">
+                            <label for="register-password">Contraseña</label>
+                            <input type="password" id="register-password" required>
+                        </div>
+                        <button type="submit" class="btn btn-success" style="width: 100%;">
+                            Crear Cuenta
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Tab: Carpetas -->
+            <div id="tab-carpetas" class="tab-content">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                    <h2>📁 Mis Carpetas</h2>
+                    <button class="btn btn-primary" onclick="showCreateFolderModal()">Nueva Carpeta</button>
+                </div>
+                <div id="carpetas-container">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        <p>Cargando carpetas...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab: Favoritos -->
+            <div id="tab-favoritos" class="tab-content">
+                <h2>❤️ Mis Propiedades Favoritas</h2>
+                <div style="margin-bottom: 1rem;">
+                    <button class="btn btn-danger" onclick="clearAllFavorites()" style="margin-left: auto; display: block;">
+                        🗑️ Limpiar Favoritos
+                    </button>
+                </div>
+                <div class="properties-grid" id="favorites-container">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        <p>Cargando favoritos...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab: Mis Propiedades -->
+            <div id="tab-mis-propiedades" class="tab-content">
+                <h2>📝 Mis Propiedades</h2>
+                <div class="properties-grid" id="my-properties-container">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        <p>Cargando mis propiedades...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab: Agregar Propiedad -->
+            <div id="tab-agregar" class="tab-content">
+                <div class="form-container">
+                    <h2>➕ Agregar Nueva Propiedad</h2>
+                    <form id="add-property-form">
+                        <div class="form-group">
+                            <label for="titulo">Título</label>
+                            <input type="text" id="titulo" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="descripcion">Descripción</label>
+                            <textarea id="descripcion" rows="3"></textarea>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="precio">Precio</label>
+                            <input type="number" id="precio" min="0" step="0.01">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="tipo_propiedad">Tipo de Propiedad</label>
+                            <select id="tipo_propiedad" required>
+                                <option value="">Seleccionar...</option>
+                                <option value="Casa">Casa</option>
+                                <option value="Departamento">Departamento</option>
+                                <option value="Terreno">Terreno</option>
+                                <option value="Local">Local Comercial</option>
+                                <option value="Oficina">Oficina</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="tipo_operacion">Tipo de Operación</label>
+                            <select id="tipo_operacion" required>
+                                <option value="">Seleccionar...</option>
+                                <option value="Venta">Venta</option>
+                                <option value="Renta">Renta</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="ciudad">Ciudad</label>
+                            <select id="ciudad" required>
+                                <option value="">Seleccionar...</option>
+                                <option value="Cuernavaca">Cuernavaca</option>
+                                <option value="Jiutepec">Jiutepec</option>
+                                <option value="Temixco">Temixco</option>
+                                <option value="Emiliano Zapata">Emiliano Zapata</option>
+                                <option value="Xochitepec">Xochitepec</option>
+                                <option value="Yautepec">Yautepec</option>
+                                <option value="Cuautla">Cuautla</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="direccion">Dirección</label>
+                            <input type="text" id="direccion">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="telefono_contacto">Teléfono de Contacto</label>
+                            <input type="tel" id="telefono_contacto" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="email_contacto">Email de Contacto</label>
+                            <input type="email" id="email_contacto" required>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary" style="width: 100%;">
+                            Agregar Propiedad
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Tab: Admin -->
+            <div id="tab-admin" class="tab-content">
+                <h2>⚙️ Panel de Administración</h2>
+                <div id="admin-content">
+                    <!-- Se llena dinámicamente -->
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal de Login/Registro -->
+    <div id="auth-modal" class="modal">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeAuthModal()">&times;</button>
+            
+            <div id="login-form" style="display: block;">
+                <h2>🔐 Iniciar Sesión</h2>
+                <form id="login-form-element">
+                    <div class="form-group">
+                        <label for="login-email">Email</label>
+                        <input type="email" id="login-email" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="login-password">Contraseña</label>
+                        <input type="password" id="login-password" required>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary" style="width: 100%;">
+                        Iniciar Sesión
+                    </button>
+                </form>
+                
+                <p style="text-align: center; margin-top: 1rem;">
+                    ¿No tienes cuenta? 
+                    <a href="#" onclick="showRegisterForm()" style="color: var(--primary);">Regístrate aquí</a>
+                </p>
+            </div>
+            
+            <div id="register-form" style="display: none;">
+                <h2>📝 Crear Cuenta</h2>
+                <form id="register-form-element">
+                    <div class="form-group">
+                        <label for="register-nombre">Nombre Completo</label>
+                        <input type="text" id="register-nombre" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="register-email">Email</label>
+                        <input type="email" id="register-email" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="register-telefono">Teléfono</label>
+                        <input type="tel" id="register-telefono" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="register-password">Contraseña</label>
+                        <input type="password" id="register-password" required>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-success" style="width: 100%;">
+                        Crear Cuenta
+                    </button>
+                </form>
+                
+                <p style="text-align: center; margin-top: 1rem;">
+                    ¿Ya tienes cuenta? 
+                    <a href="#" onclick="showLoginForm()" style="color: var(--primary);">Inicia sesión aquí</a>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de WhatsApp -->
+    <div id="whatsapp-modal" class="modal">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeWhatsAppModal()">&times;</button>
+            
+            <h2>📱 Contactar por WhatsApp</h2>
+            <form id="whatsapp-form">
+                <div class="form-group">
+                    <label for="whatsapp-numero">Número de teléfono del vendedor</label>
+                    <input type="tel" id="whatsapp-numero" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="whatsapp-mensaje">Mensaje personalizado (opcional)</label>
+                    <textarea id="whatsapp-mensaje" rows="4" placeholder="Se generará un mensaje automático con tus datos si lo dejas vacío"></textarea>
+                </div>
+                
+                <button type="submit" class="btn btn-success" style="width: 100%;">
+                    📱 Enviar WhatsApp
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Configuración
+        const API_BASE = 'http://localhost:8000';
+        let currentUser = null;
+        let authToken = null;
+        let currentPropertyForWhatsApp = null;
+
+        // Inicialización
+        document.addEventListener('DOMContentLoaded', function() {
+            checkAuthStatus();
+            loadProperties();
+            setupEventListeners();
+        });
+
+        // ===== FUNCIONES DE AUTENTICACIÓN =====
+        
+        function checkAuthStatus() {
+            authToken = localStorage.getItem('auth_token');
+            currentUser = JSON.parse(localStorage.getItem('current_user') || 'null');
+            
+            updateAuthUI();
+        }
+
+        function updateAuthUI() {
+            const authSection = document.getElementById('auth-section');
+            const loginTabBtn = document.getElementById('login-tab-btn');
+            const registerTabBtn = document.getElementById('register-tab-btn');
+            const carpetasTabBtn = document.getElementById('carpetas-tab-btn');
+            const favoritosTabBtn = document.getElementById('favoritos-tab-btn');
+            const adminTabBtn = document.getElementById('admin-tab-btn');
+            
+            if (currentUser && authToken) {
+                // Usuario logueado
+                authSection.innerHTML = `
+                    <div class="user-info">
+                        <span>👋 ${currentUser.nombre}</span>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <button class="btn btn-secondary" onclick="showTab('carpetas')">📁 Carpetas</button>
+                            <button class="btn btn-secondary" onclick="showTab('favoritos')">❤️ Favoritos</button>
+                            ${currentUser.es_admin ? '<button class="btn btn-secondary" onclick="showTab(\'admin\')">⚙️ Admin</button>' : ''}
+                            <button class="btn btn-danger" onclick="logout()">🚪 Salir</button>
+                        </div>
+                    </div>
+                `;
+                
+                // Mostrar pestañas de usuario logueado
+                loginTabBtn.style.display = 'none';
+                registerTabBtn.style.display = 'none';
+                carpetasTabBtn.style.display = 'block';
+                favoritosTabBtn.style.display = 'block';
+                
+                if (currentUser.es_admin) {
+                    adminTabBtn.style.display = 'block';
+                }
+                
+            } else {
+                // Usuario no logueado
+                authSection.innerHTML = `
+                    <div id="auth-buttons">
+                        <button class="btn btn-primary" onclick="showTab('login')">🔐 Acceso</button>
+                        <button class="btn btn-success" onclick="showTab('register')">📝 Registro</button>
+                        <button class="btn btn-success" onclick="showCreateFolderModal()">📁 Crear Carpeta</button>
+                    </div>
+                `;
+                
+                // Ocultar pestañas de usuario logueado
+                carpetasTabBtn.style.display = 'none';
+                favoritosTabBtn.style.display = 'none';
+                adminTabBtn.style.display = 'none';
+            }
+        }
+
+        async function login(email, password) {
+            try {
+                const response = await fetch(`${API_BASE}/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ email, password })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    authToken = data.access_token;
+                    currentUser = data.usuario;
+                    
+                    localStorage.setItem('auth_token', authToken);
+                    localStorage.setItem('current_user', JSON.stringify(currentUser));
+                    
+                    updateAuthUI();
+                    showMessage('¡Bienvenido! Has iniciado sesión correctamente.', 'success');
+                    showTab('propiedades');
+                    
+                    return true;
+                } else {
+                    const error = await response.json();
+                    showMessage(error.detail || 'Error al iniciar sesión', 'error');
+                    return false;
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showMessage('Error de conexión', 'error');
+                return false;
+            }
+        }
+
+        async function register(nombre, email, telefono, password) {
+            try {
+                const response = await fetch(`${API_BASE}/registro`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ nombre, email, telefono, password })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    authToken = data.access_token;
+                    currentUser = data.usuario;
+                    
+                    localStorage.setItem('auth_token', authToken);
+                    localStorage.setItem('current_user', JSON.stringify(currentUser));
+                    
+                    updateAuthUI();
+                    showMessage('¡Cuenta creada exitosamente! Bienvenido.', 'success');
+                    showTab('propiedades');
+                    
+                    return true;
+                } else {
+                    const error = await response.json();
+                    showMessage(error.detail || 'Error al crear cuenta', 'error');
+                    return false;
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showMessage('Error de conexión', 'error');
+                return false;
+            }
+        }
+
+        function logout() {
+            authToken = null;
+            currentUser = null;
+            localStorage.removeItem('auth_token');
+            localStorage.removeItem('current_user');
+            
+            updateAuthUI();
+            showMessage('Has cerrado sesión correctamente.', 'success');
+            showTab('propiedades');
+        }
+
+        // ===== FUNCIONES DE CARPETAS =====
+        
+        function showCreateFolderModal() {
+            if (!currentUser) {
+                showMessage('Debes iniciar sesión para crear carpetas', 'error');
+                showTab('login');
+                return;
+            }
+            document.getElementById('create-folder-modal').style.display = 'block';
+        }
+
+        async function createFolder(nombre, descripcion, esPublica) {
+            try {
+                const response = await fetch(`${API_BASE}/carpetas`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify({
+                        nombre: nombre,
+                        descripcion: descripcion,
+                        es_publica: esPublica
+                    })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    showMessage('Carpeta creada exitosamente', 'success');
+                    closeModal('create-folder-modal');
+                    loadCarpetas();
+                    return true;
+                } else {
+                    const error = await response.json();
+                    showMessage(error.detail || 'Error al crear carpeta', 'error');
+                    return false;
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showMessage('Error de conexión', 'error');
+                return false;
+            }
+        }
+
+        async function loadCarpetas() {
+            if (!currentUser || !authToken) return;
+            
+            try {
+                const response = await fetch(`${API_BASE}/mis-carpetas`, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    renderCarpetas(data.carpetas);
+                } else {
+                    showMessage('Error al cargar carpetas', 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showMessage('Error de conexión al cargar carpetas', 'error');
+            }
+        }
+
+        function renderCarpetas(carpetas) {
+            const container = document.getElementById('carpetas-container');
+            
+            if (carpetas.length === 0) {
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 2rem; color: #6b7280;">
+                        <h3>📁 No tienes carpetas</h3>
+                        <p>Crea tu primera carpeta para organizar propiedades</p>
+                        <button class="btn btn-primary" onclick="showCreateFolderModal()">Nueva Carpeta</button>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = carpetas.map(carpeta => `
+                <div class="property-card" style="cursor: pointer;" onclick="openCarpeta(${carpeta.id})">
+                    <div class="property-content">
+                        <h3>📁 ${carpeta.nombre}</h3>
+                        <p style="color: #6b7280; margin: 0.5rem 0;">${carpeta.descripcion || 'Sin descripción'}</p>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="color: #059669;">${carpeta.total_propiedades} propiedades</span>
+                            <span style="font-size: 0.8rem; color: #6b7280;">
+                                ${carpeta.es_publica ? '🌐 Pública' : '🔒 Privada'}
+                            </span>
+                        </div>
+                        <div style="margin-top: 1rem;">
+                            <button class="btn btn-danger" onclick="event.stopPropagation(); deleteCarpeta(${carpeta.id})" style="width: 100%;">
+                                🗑️ Eliminar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // ===== FUNCIONES DE CONTACTOS =====
+        
+        function showContactModal(propiedadId) {
+            if (!currentUser) {
+                showMessage('Debes iniciar sesión para agregar contactos', 'error');
+                showTab('login');
+                return;
+            }
+            
+            document.getElementById('contact-property-id').value = propiedadId;
+            loadContactInfo(propiedadId);
+            document.getElementById('contact-modal').style.display = 'block';
+        }
+
+        async function loadContactInfo(propiedadId) {
+            try {
+                const response = await fetch(`${API_BASE}/contactos/${propiedadId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+
+                if (response.ok) {
+                    const contacto = await response.json();
+                    if (contacto) {
+                        document.getElementById('contact-name').value = contacto.nombre || '';
+                        document.getElementById('contact-phone').value = contacto.telefono || '';
+                        document.getElementById('contact-email').value = contacto.email || '';
+                        document.getElementById('contact-notes').value = contacto.notas || '';
+                    }
+                }
+            } catch (error) {
+                console.error('Error cargando contacto:', error);
+            }
+        }
+
+        async function saveContact(propiedadId, nombre, telefono, email, notas) {
+            try {
+                const response = await fetch(`${API_BASE}/contactos/${propiedadId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify({
+                        propiedad_id: propiedadId,
+                        nombre: nombre,
+                        telefono: telefono,
+                        email: email,
+                        notas: notas
+                    })
+                });
+
+                if (response.ok) {
+                    showMessage('Contacto guardado exitosamente', 'success');
+                    closeModal('contact-modal');
+                    loadProperties(); // Recargar para mostrar contactos
+                    return true;
+                } else {
+                    const error = await response.json();
+                    showMessage(error.detail || 'Error al guardar contacto', 'error');
+                    return false;
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showMessage('Error de conexión', 'error');
+                return false;
+            }
+        }
+
+        // ===== FUNCIONES DE RECUPERACIÓN DE CONTRASEÑA =====
+        
+        function showRecoveryForm() {
+            document.getElementById('recovery-modal').style.display = 'block';
+        }
+
+        async function requestPasswordRecovery(email) {
+            try {
+                const response = await fetch(`${API_BASE}/recuperar-password`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ email: email })
+                });
+
+                if (response.ok) {
+                    showMessage('Si el email existe, recibirás instrucciones de recuperación', 'success');
+                    closeModal('recovery-modal');
+                    return true;
+                } else {
+                    const error = await response.json();
+                    showMessage(error.detail || 'Error al solicitar recuperación', 'error');
+                    return false;
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showMessage('Error de conexión', 'error');
+                return false;
+            }
+        }
+
+        // Event Listeners
+        function setupEventListeners() {
+            // Tabs
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const tab = this.dataset.tab;
+                    switchTab(tab);
+                });
+            });
+
+            // Formularios
+            document.getElementById('login-form-element').addEventListener('submit', handleLogin);
+            document.getElementById('register-form-element').addEventListener('submit', handleRegister);
+            document.getElementById('add-property-form').addEventListener('submit', handleAddProperty);
+            document.getElementById('whatsapp-form').addEventListener('submit', handleWhatsApp);
+        }
+
+        // Autenticación
+        function checkAuthStatus() {
+            authToken = localStorage.getItem('authToken');
+            const userData = localStorage.getItem('userData');
+            
+            if (authToken && userData) {
+                currentUser = JSON.parse(userData);
+                updateAuthUI();
+                showUserTabs();
+            } else {
+                showGuestUI();
+            }
+        }
+
+        function updateAuthUI() {
+            const authSection = document.getElementById('auth-section');
+            
+            if (currentUser) {
+                authSection.innerHTML = `
+                    <div class="user-info">
+                        <span>👤 ${currentUser.nombre}</span>
+                        ${currentUser.es_admin ? '<span style="background: var(--warning); padding: 2px 6px; border-radius: 3px; font-size: 0.8rem;">ADMIN</span>' : ''}
+                    </div>
+                    <button class="btn btn-secondary" onclick="logout()">Cerrar Sesión</button>
+                `;
+            } else {
+                authSection.innerHTML = `
+                    <button class="btn btn-primary" onclick="showAuthModal('login')">Iniciar Sesión</button>
+                    <button class="btn btn-success" onclick="showAuthModal('register')">Registrarse</button>
+                `;
+            }
+        }
+
+        function showUserTabs() {
+            document.querySelector('[data-tab="favoritos"]').style.display = 'block';
+            document.querySelector('[data-tab="mis-propiedades"]').style.display = 'block';
+            document.querySelector('[data-tab="agregar"]').style.display = 'block';
+            
+            if (currentUser && currentUser.es_admin) {
+                document.querySelector('[data-tab="admin"]').style.display = 'block';
+            }
+        }
+
+        function showGuestUI() {
+            document.querySelector('[data-tab="favoritos"]').style.display = 'none';
+            document.querySelector('[data-tab="mis-propiedades"]').style.display = 'none';
+            document.querySelector('[data-tab="agregar"]').style.display = 'none';
+            document.querySelector('[data-tab="admin"]').style.display = 'none';
+        }
+
+        async function handleLogin(e) {
+            e.preventDefault();
+            
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            
+            try {
+                const response = await fetch(`${API_BASE}/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ email, password })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    authToken = data.access_token;
+                    currentUser = data.usuario;
+                    
+                    localStorage.setItem('authToken', authToken);
+                    localStorage.setItem('userData', JSON.stringify(currentUser));
+                    
+                    updateAuthUI();
+                    showUserTabs();
+                    closeAuthModal();
+                    showMessage('¡Bienvenido! Has iniciado sesión correctamente.', 'success');
+                    
+                    // Recargar propiedades para mostrar favoritos
+                    loadProperties();
+                } else {
+                    const error = await response.json();
+                    showMessage(error.detail || 'Error al iniciar sesión', 'error');
+                }
+            } catch (error) {
+                showMessage('Error de conexión', 'error');
+            }
+        }
+
+        async function handleRegister(e) {
+            e.preventDefault();
+            
+            const nombre = document.getElementById('register-nombre').value;
+            const email = document.getElementById('register-email').value;
+            const telefono = document.getElementById('register-telefono').value;
+            const password = document.getElementById('register-password').value;
+            
+            try {
+                const response = await fetch(`${API_BASE}/registro`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ nombre, email, telefono, password })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    authToken = data.access_token;
+                    currentUser = data.usuario;
+                    
+                    localStorage.setItem('authToken', authToken);
+                    localStorage.setItem('userData', JSON.stringify(currentUser));
+                    
+                    updateAuthUI();
+                    showUserTabs();
+                    closeAuthModal();
+                    showMessage('¡Cuenta creada exitosamente! Bienvenido.', 'success');
+                    
+                    // Recargar propiedades para mostrar favoritos
+                    loadProperties();
+                } else {
+                    const error = await response.json();
+                    showMessage(error.detail || 'Error al crear cuenta', 'error');
+                }
+            } catch (error) {
+                showMessage('Error de conexión', 'error');
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('userData');
+            authToken = null;
+            currentUser = null;
+            
+            updateAuthUI();
+            showGuestUI();
+            switchTab('propiedades');
+            showMessage('Has cerrado sesión correctamente.', 'info');
+            
+            // Recargar propiedades para ocultar favoritos
+            loadProperties();
+        }
+
+        // Gestión de propiedades
+        async function loadProperties() {
+            const container = document.getElementById('properties-container');
+            container.innerHTML = '<div class="loading"><div class="spinner"></div><p>Cargando propiedades...</p></div>';
+            
+            try {
+                const headers = {
+                    'Content-Type': 'application/json'
+                };
+                
+                if (authToken) {
+                    headers['Authorization'] = `Bearer ${authToken}`;
+                }
+                
+                const response = await fetch(`${API_BASE}/propiedades?por_pagina=60&precio_min=1`, {
+                    headers: headers
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    displayProperties(data.propiedades, container);
+                } else {
+                    container.innerHTML = '<div class="message error">Error al cargar propiedades</div>';
+                }
+            } catch (error) {
+                container.innerHTML = '<div class="message error">Error de conexión</div>';
+            }
+        }
+
+        function displayProperties(properties, container) {
+            if (properties.length === 0) {
+                container.innerHTML = '<div class="message info">No se encontraron propiedades</div>';
+                return;
+            }
+            
+            container.innerHTML = properties.map(property => `
+                <div class="property-card">
+                    <img src="${property.imagen_url}" alt="${property.titulo}" class="property-image" 
+                         onerror="this.src='https://via.placeholder.com/400x300/e2e8f0/64748b?text=Sin+Imagen'">
+                    
+                    <div class="property-content">
+                        <div class="property-title">${property.titulo}</div>
+                        <div class="property-price">
+                            ${property.precio ? `$${property.precio.toLocaleString()}` : 'Precio a consultar'}
+                        </div>
+                        <div class="property-location">
+                            📍 ${property.ciudad}${property.direccion ? `, ${property.direccion}` : ''}
+                        </div>
+                        
+                        <div class="property-actions">
+                            ${currentUser ? `
+                                <button class="favorite-btn ${property.es_favorito ? 'active' : ''}" 
+                                        onclick="toggleFavorite('${property.id}', this)">
+                                    ${property.es_favorito ? '❤️' : '🤍'}
+                                </button>
+                            ` : ''}
+                            
+                            <button class="btn btn-primary" onclick="showWhatsAppModal('${property.id}')">
+                                📱 WhatsApp
+                            </button>
+                            
+                            ${property.link ? `
+                                <a href="${property.link}" target="_blank" class="btn btn-secondary">
+                                    🔗 Ver más
+                                </a>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Favoritos
+        async function toggleFavorite(propertyId, button) {
+            if (!authToken) {
+                showMessage('Debes iniciar sesión para usar favoritos', 'error');
+                return;
+            }
+            
+            const isFavorite = button.classList.contains('active');
+            const method = isFavorite ? 'DELETE' : 'POST';
+            
+            try {
+                const response = await fetch(`${API_BASE}/favoritos/${propertyId}`, {
+                    method: method,
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    if (data.es_favorito) {
+                        button.classList.add('active');
+                        button.innerHTML = '❤️';
+                    } else {
+                        button.classList.remove('active');
+                        button.innerHTML = '🤍';
+                    }
+                    
+                    showMessage(data.mensaje, 'success');
+                } else {
+                    showMessage('Error al actualizar favorito', 'error');
+                }
+            } catch (error) {
+                showMessage('Error de conexión', 'error');
+            }
+        }
+
+        async function loadFavorites() {
+            if (!authToken) return;
+            
+            const container = document.getElementById('favorites-container');
+            container.innerHTML = '<div class="loading"><div class="spinner"></div><p>Cargando favoritos...</p></div>';
+            
+            try {
+                const response = await fetch(`${API_BASE}/mis-favoritos`, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    displayProperties(data.propiedades, container);
+                } else {
+                    container.innerHTML = '<div class="message error">Error al cargar favoritos</div>';
+                }
+            } catch (error) {
+                container.innerHTML = '<div class="message error">Error de conexión</div>';
+            }
+        }
+
+        // WhatsApp
+        function showWhatsAppModal(propertyId) {
+            if (!authToken) {
+                showMessage('Debes iniciar sesión para contactar por WhatsApp', 'error');
+                return;
+            }
+            
+            currentPropertyForWhatsApp = propertyId;
+            document.getElementById('whatsapp-modal').style.display = 'block';
+        }
+
+        function closeWhatsAppModal() {
+            document.getElementById('whatsapp-modal').style.display = 'none';
+            currentPropertyForWhatsApp = null;
+        }
+
+        async function handleWhatsApp(e) {
+            e.preventDefault();
+            
+            const numero = document.getElementById('whatsapp-numero').value;
+            const mensaje = document.getElementById('whatsapp-mensaje').value;
+            
+            try {
+                const response = await fetch(`${API_BASE}/whatsapp/mensaje`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify({
+                        numero_destino: numero,
+                        mensaje_personalizado: mensaje || null,
+                        propiedad_id: currentPropertyForWhatsApp
+                    })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    window.open(data.url_whatsapp, '_blank');
+                    closeWhatsAppModal();
+                    showMessage('¡Mensaje enviado a WhatsApp!', 'success');
+                } else {
+                    showMessage('Error al generar mensaje de WhatsApp', 'error');
+                }
+            } catch (error) {
+                showMessage('Error de conexión', 'error');
+            }
+        }
+
+        // Agregar propiedades
+        async function handleAddProperty(e) {
+            e.preventDefault();
+            
+            if (!authToken) {
+                showMessage('Debes iniciar sesión para agregar propiedades', 'error');
+                return;
+            }
+            
+            const formData = {
+                titulo: document.getElementById('titulo').value,
+                descripcion: document.getElementById('descripcion').value,
+                precio: parseFloat(document.getElementById('precio').value) || null,
+                tipo_propiedad: document.getElementById('tipo_propiedad').value,
+                tipo_operacion: document.getElementById('tipo_operacion').value,
+                ciudad: document.getElementById('ciudad').value,
+                estado: 'Morelos',
+                direccion: document.getElementById('direccion').value,
+                telefono_contacto: document.getElementById('telefono_contacto').value,
+                email_contacto: document.getElementById('email_contacto').value
+            };
+            
+            try {
+                const response = await fetch(`${API_BASE}/propiedades-colaborativas`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify(formData)
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    showMessage('¡Propiedad agregada exitosamente! Está pendiente de aprobación.', 'success');
+                    document.getElementById('add-property-form').reset();
+                    switchTab('mis-propiedades');
+                } else {
+                    const error = await response.json();
+                    showMessage(error.detail || 'Error al agregar propiedad', 'error');
+                }
+            } catch (error) {
+                showMessage('Error de conexión', 'error');
+            }
+        }
+
+        // Navegación
+        function switchTab(tabName) {
+            // Actualizar botones
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+            
+            // Actualizar contenido
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            document.getElementById(`tab-${tabName}`).classList.add('active');
+            
+            // Cargar contenido específico
+            if (tabName === 'favoritos') {
+                loadFavorites();
+            } else if (tabName === 'mis-propiedades') {
+                loadMyProperties();
+            } else if (tabName === 'admin' && currentUser && currentUser.es_admin) {
+                loadAdminPanel();
+            }
+        }
+
+        async function loadMyProperties() {
+            // Implementar carga de propiedades del usuario
+            const container = document.getElementById('my-properties-container');
+            container.innerHTML = '<div class="message info">Función en desarrollo</div>';
+        }
+
+        async function loadAdminPanel() {
+            // Implementar panel de administración
+            const container = document.getElementById('admin-content');
+            container.innerHTML = '<div class="message info">Panel de administración en desarrollo</div>';
+        }
+
+        // Modales
+        function showAuthModal(type) {
+            document.getElementById('auth-modal').style.display = 'block';
+            if (type === 'register') {
+                showRegisterForm();
+            } else {
+                showLoginForm();
+            }
+        }
+
+        function closeAuthModal() {
+            document.getElementById('auth-modal').style.display = 'none';
+        }
+
+        function showLoginForm() {
+            document.getElementById('login-form').style.display = 'block';
+            document.getElementById('register-form').style.display = 'none';
+        }
+
+        function showRegisterForm() {
+            document.getElementById('login-form').style.display = 'none';
+            document.getElementById('register-form').style.display = 'block';
+        }
+
+        // Utilidades
+        function showMessage(message, type) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type}`;
+            messageDiv.textContent = message;
+            
+            document.body.insertBefore(messageDiv, document.body.firstChild);
+            
+            setTimeout(() => {
+                messageDiv.remove();
+            }, 5000);
+        }
+
+        // Cerrar modales al hacer clic fuera
+        window.onclick = function(event) {
+            const authModal = document.getElementById('auth-modal');
+            const whatsappModal = document.getElementById('whatsapp-modal');
+            
+            if (event.target === authModal) {
+                closeAuthModal();
+            }
+            if (event.target === whatsappModal) {
+                closeWhatsAppModal();
+            }
+        }
+    </script>
+</body>
+</html> 
