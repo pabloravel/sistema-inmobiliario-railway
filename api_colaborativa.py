@@ -353,6 +353,16 @@ async def health_check():
             "timestamp": datetime.now().isoformat()
         }
 
+@app.get("/salud")
+def salud_check():
+    """Health check en español para Railway - ULTRA SIMPLE"""
+    return {"status": "ok"}
+
+@app.get("/ping")
+def ping():
+    """Ping simple para Railway"""
+    return "pong"
+
 @app.get("/propiedades", response_model=RespuestaPaginada)
 async def listar_propiedades(
     pagina: int = Query(1, ge=1, description="Número de página"),
@@ -669,5 +679,18 @@ async def crear_propiedad_colaborativa(
 
 if __name__ == "__main__":
     import uvicorn
+    import os
+    
+    # Configuración de logging para Railway
+    logging.basicConfig(level=logging.INFO)
+    logger = logging.getLogger(__name__)
+    
     port = int(os.environ.get("PORT", 8000))
-    uvicorn.run(app, host="0.0.0.0", port=port) 
+    
+    logger.info("🚀 INICIANDO API RAILWAY v3.0")
+    logger.info(f"🌐 Puerto: {port}")
+    logger.info("🏥 Healthcheck: /salud")
+    logger.info("📊 Endpoints: /, /health, /salud, /propiedades")
+    logger.info("✅ RAILWAY DEPLOYMENT READY")
+    
+    uvicorn.run(app, host="0.0.0.0", port=port, log_level="info") 
