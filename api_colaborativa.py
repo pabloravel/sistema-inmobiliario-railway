@@ -301,57 +301,15 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(securit
 # ENDPOINTS PRINCIPALES
 # =====================================================
 
-@app.get("/", response_model=Dict)
-async def root():
-    """Endpoint raíz con información de la API"""
-    return {
-        "mensaje": "🏠 API Inmobiliaria Colaborativa para Railway",
-        "version": "3.0.0",
-        "estado": "✅ Funcionando correctamente",
-        "funcionalidades": [
-            "🔍 Búsqueda avanzada de propiedades",
-            "👥 Sistema de usuarios y autenticación",
-            "⭐ Favoritos personalizados",
-            "📁 Carpetas colaborativas",
-            "📱 Integración WhatsApp",
-            "📊 Estadísticas en tiempo real",
-            "🛡️ Seguridad JWT"
-        ],
-        "endpoints": {
-            "propiedades": "/propiedades",
-            "buscar": "/buscar",
-            "estadisticas": "/estadisticas",
-            "registro": "/registro",
-            "login": "/login",
-            "docs": "/docs"
-        },
-        "timestamp": datetime.now().isoformat()
-    }
+@app.get("/")
+def root():
+    """Endpoint raíz ultra simple para Railway"""
+    return {"status": "running", "service": "propiedades-api", "version": "3.0"}
 
 @app.get("/health")
-async def health_check():
-    """Health check básico para Railway"""
-    try:
-        # Probar conexión a BD
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute("SELECT 1")
-        cursor.fetchone()
-        conn.close()
-        
-        return {
-            "status": "healthy",
-            "version": "3.0.0",
-            "service": "propiedades-api",
-            "database": "connected",
-            "timestamp": datetime.now().isoformat()
-        }
-    except Exception as e:
-        return {
-            "status": "unhealthy",
-            "error": str(e),
-            "timestamp": datetime.now().isoformat()
-        }
+def health_check():
+    """Health check básico para Railway - SIN BD"""
+    return {"status": "healthy", "service": "propiedades-api", "version": "3.0"}
 
 @app.get("/salud")
 def salud_check():
