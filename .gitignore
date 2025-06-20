@@ -1,0 +1,73 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# Environment variables
+.env
+.env.local
+.env.production
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Railway
+.railway/
+
+# Database
+*.db
+*.sqlite3
+
+# Cache
+*.cache
+.pytest_cache/
+
+# Respaldos y archivos temporales
+respaldos/
+backups/
+*.backup
+*.bak
+temp/
+tmp/
+
+# Archivos específicos del proyecto
+resultados/
+archivos_no_proyecto/
+archivos_no_utilizados/
+archivos_obsoletos/
+SISTEMA_COMPLETO_*/
+VERSION_ESTABLE_*/
+RESPALDO_*/
