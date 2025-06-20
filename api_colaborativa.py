@@ -325,8 +325,7 @@ def ping():
 async def listar_propiedades(
     pagina: int = Query(1, ge=1, description="Número de página"),
     por_pagina: int = Query(60, ge=1, le=500, description="Propiedades por página"),
-    precio_min: Optional[float] = Query(1, description="Precio mínimo"),
-    current_user: Optional[Usuario] = Depends(get_current_user_optional)
+    precio_min: Optional[float] = Query(1, description="Precio mínimo")
 ):
     """Listar propiedades con filtros básicos"""
     inicio = time.time()
