@@ -54,5 +54,5 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
 # Exponer puerto
 EXPOSE ${PORT}
 
-# Comando de inicio - usar uvicorn con FastAPI
-CMD ["sh", "-c", "uvicorn api_colaborativa:app --host 0.0.0.0 --port $PORT"]
+# Comando de inicio - usar gunicorn con workers uvicorn
+CMD ["sh", "-c", "gunicorn api_colaborativa:app -w 4 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT"] 
