@@ -68,3 +68,4 @@ python -m http.server 8080
 # Railway deployment fix - Thu Jun 19 17:01:17 CST 2025
 # Forzar redeploy
 # Force redeploy Fri Jun 20 09:40:58 CST 2025
+# Added PORT variable Fri Jun 20 09:42:53 CST 2025
