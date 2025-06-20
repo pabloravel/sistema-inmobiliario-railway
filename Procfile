@@ -1,1 +1,1 @@
-web: python -m uvicorn api_colaborativa:app --host 0.0.0.0 --port $PORT
+web: gunicorn api_colaborativa:app -w 4 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT
