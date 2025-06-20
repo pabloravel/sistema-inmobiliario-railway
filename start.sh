@@ -1,8 +1,21 @@
 #!/bin/bash
 
-echo "🚀 Iniciando API Inmobiliaria en Railway..."
-echo "Puerto: $PORT"
-echo "Comando: gunicorn api_colaborativa:app -w 4 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT"
+echo "🚀 Iniciando aplicación en Railway..."
+echo "📊 Puerto: ${PORT:-8080}"
+echo "🌐 Host: 0.0.0.0"
 
-# Ejecutar la aplicación
-exec gunicorn api_colaborativa:app -w 4 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT 
+# Verificar que el archivo existe
+if [ ! -f "api_colaborativa.py" ]; then
+    echo "❌ Error: api_colaborativa.py no encontrado"
+    exit 1
+fi
+
+# Iniciar con gunicorn (más estable para producción)
+exec gunicorn api_colaborativa:app \
+    -w 1 \
+    -k uvicorn.workers.UvicornWorker \
+    --bind 0.0.0.0:${PORT:-8080} \
+    --timeout 300 \
+    --access-logfile - \
+    --error-logfile - \
+    --log-level info 

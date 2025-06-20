@@ -637,18 +637,19 @@ async def crear_propiedad_colaborativa(
 
 if __name__ == "__main__":
     import uvicorn
-    import os
     
-    # Configuración de logging para Railway
-    logging.basicConfig(level=logging.INFO)
-    logger = logging.getLogger(__name__)
+    # Puerto para Railway - debe ser dinámico
+    port = int(os.getenv("PORT", 8080))
     
-    port = int(os.environ.get("PORT", 8000))
+    print(f"🚀 Iniciando servidor en puerto {port}")
+    print(f"🌐 Aplicación: API Inmobiliaria Colaborativa v3.0")
+    print(f"📊 Endpoints disponibles en /{port}")
     
-    logger.info("🚀 INICIANDO API RAILWAY v3.0")
-    logger.info(f"🌐 Puerto: {port}")
-    logger.info("🏥 Healthcheck: /salud")
-    logger.info("📊 Endpoints: /, /health, /salud, /propiedades")
-    logger.info("✅ RAILWAY DEPLOYMENT READY")
-    
-    uvicorn.run(app, host="0.0.0.0", port=port, log_level="info") 
+    # Configuración específica para Railway
+    uvicorn.run(
+        "api_colaborativa:app",
+        host="0.0.0.0",
+        port=port,
+        log_level="info",
+        access_log=True
+    ) 
