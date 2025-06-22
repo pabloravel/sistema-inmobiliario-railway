@@ -55,7 +55,7 @@ def get_db_connection():
         if DATABASE_URL.startswith('postgresql://'):
             # Conexión directa con URL
             conn = psycopg2.connect(DATABASE_URL)
-        else:
+else:
             # Configuración manual (fallback)
             conn = psycopg2.connect(
                 host='dpg-d1aothp5pdvs73d4kahg-a.oregon-postgres.render.com',
@@ -151,7 +151,7 @@ def generar_url_imagen(nombre_imagen: str) -> str:
         if len(partes) >= 4:
             try:
                 # Extraer fecha del nombre: ciudad-2025-06-09-id.jpg
-                fecha = f"{partes[1]}-{partes[2]}-{partes[3]}"
+            fecha = f"{partes[1]}-{partes[2]}-{partes[3]}"
                 return f"https://propiedades-morelos-imagenes.s3.amazonaws.com/{fecha}/{nombre_imagen}"
             except:
                 pass
@@ -293,13 +293,13 @@ async def listar_propiedades(
     
     # Procesar propiedades
     propiedades = []
-    for prop in propiedades_data:
+        for prop in propiedades_data:
         prop_dict = dict(prop)
-        
-        # Generar URL de imagen
-        if prop_dict.get('imagen'):
-            prop_dict['imagen_url'] = generar_url_imagen(prop_dict['imagen'])
-        else:
+            
+            # Generar URL de imagen
+            if prop_dict.get('imagen'):
+                prop_dict['imagen_url'] = generar_url_imagen(prop_dict['imagen'])
+            else:
             prop_dict['imagen_url'] = generar_url_imagen('')
         
         # Convertir Decimal a float
@@ -361,7 +361,7 @@ async def corregir_imagenes_render():
         # Verificar imágenes problemáticas
         cursor.execute("""
             SELECT COUNT(*) 
-            FROM propiedades 
+    FROM propiedades 
             WHERE imagen LIKE '%imagen_no_disponible%' 
                OR imagen LIKE '%static/images%'
                OR imagen LIKE '%localhost%'
@@ -419,8 +419,8 @@ async def corregir_imagenes_render():
         
         print(f"✅ CORRECCIÓN COMPLETADA: {imagenes_corregidas} imágenes corregidas")
         print(f"📊 Total con S3: {total_s3}/{total_propiedades} ({porcentaje_s3:.1f}%)")
-        
-        return {
+    
+    return {
             "success": True,
             "message": "Corrección de imágenes completada exitosamente",
             "corregidas": imagenes_corregidas,
