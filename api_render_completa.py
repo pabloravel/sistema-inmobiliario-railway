@@ -343,6 +343,101 @@ async def api_propiedades_compatibilidad(
     )
 
 # =====================================================
+# ENDPOINT CORRECCIÓN DE IMÁGENES
+# =====================================================
+
+@app.post("/api/corregir-imagenes")
+async def corregir_imagenes_render():
+    """Endpoint para corregir imágenes en Render usando AWS S3"""
+    try:
+        print("🔧 INICIANDO CORRECCIÓN DE IMÁGENES EN RENDER")
+        
+        # Conectar a PostgreSQL
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Verificar imágenes problemáticas
+        cursor.execute("""
+            SELECT COUNT(*) 
+            FROM propiedades 
+            WHERE imagen LIKE '%imagen_no_disponible%' 
+               OR imagen LIKE '%static/images%'
+               OR imagen LIKE '%localhost%'
+               OR imagen = ''
+               OR imagen IS NULL
+        """)
+        
+        total_problematicas = cursor.fetchone()[0]
+        print(f"📊 Imágenes problemáticas encontradas: {total_problematicas}")
+        
+        if total_problematicas == 0:
+            cursor.close()
+            conn.close()
+            return {
+                "success": True, 
+                "message": "Todas las imágenes ya están correctas",
+                "corregidas": 0,
+                "total_problematicas": 0
+            }
+        
+        # Corregir imágenes usando AWS S3
+        print("🔧 Corrigiendo imágenes con URLs de AWS S3...")
+        
+        query_correccion = """
+            UPDATE propiedades 
+            SET imagen = CONCAT(
+                'https://propiedades-morelos-imagenes.s3.amazonaws.com/2025-05-30/cuernavaca-2025-05-30-',
+                id,
+                '.jpg'
+            )
+            WHERE imagen LIKE '%imagen_no_disponible%' 
+               OR imagen LIKE '%static/images%'
+               OR imagen LIKE '%localhost%'
+               OR imagen = ''
+               OR imagen IS NULL
+        """
+        
+        cursor.execute(query_correccion)
+        imagenes_corregidas = cursor.rowcount
+        
+        # Confirmar cambios
+        conn.commit()
+        
+        # Verificar resultado final
+        cursor.execute("SELECT COUNT(*) FROM propiedades WHERE imagen LIKE '%s3.amazonaws.com%'")
+        total_s3 = cursor.fetchone()[0]
+        
+        cursor.execute("SELECT COUNT(*) FROM propiedades")
+        total_propiedades = cursor.fetchone()[0]
+        
+        cursor.close()
+        conn.close()
+        
+        porcentaje_s3 = (total_s3 / total_propiedades * 100) if total_propiedades > 0 else 0
+        
+        print(f"✅ CORRECCIÓN COMPLETADA: {imagenes_corregidas} imágenes corregidas")
+        print(f"📊 Total con S3: {total_s3}/{total_propiedades} ({porcentaje_s3:.1f}%)")
+        
+        return {
+            "success": True,
+            "message": "Corrección de imágenes completada exitosamente",
+            "corregidas": imagenes_corregidas,
+            "total_problematicas": total_problematicas,
+            "total_s3": total_s3,
+            "total_propiedades": total_propiedades,
+            "porcentaje_s3": round(porcentaje_s3, 1)
+        }
+        
+    except Exception as e:
+        print(f"❌ Error en corrección de imágenes: {e}")
+        logger.error(f"Error detallado: {e}")
+        return {
+            "success": False,
+            "message": f"Error en corrección: {str(e)}",
+            "error": str(e)
+        }
+
+# =====================================================
 # INICIAR APLICACIÓN
 # =====================================================
 
