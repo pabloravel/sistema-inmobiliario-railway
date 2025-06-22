@@ -13,6 +13,7 @@ Esta API incluye:
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import Response
 from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
 import psycopg2
@@ -22,6 +23,7 @@ import logging
 from datetime import datetime
 import time
 import os
+import httpx
 
 # Configuración de logging
 logging.basicConfig(level=logging.INFO)
@@ -436,6 +438,66 @@ async def corregir_imagenes_render():
             "message": f"Error en corrección: {str(e)}",
             "error": str(e)
         }
+
+# =====================================================
+# PROXY DE IMÁGENES S3
+# =====================================================
+
+@app.get("/proxy-imagen/{imagen_nombre}")
+async def proxy_imagen_s3(imagen_nombre: str):
+    """Proxy para servir imágenes de S3 desde el mismo dominio (evita CORS)"""
+    try:
+        # Construir URL completa de S3
+        if '2025-' in imagen_nombre:
+            # Extraer fecha del nombre: cuernavaca-2025-06-09-123456.jpg
+            partes = imagen_nombre.split('-')
+            if len(partes) >= 4:
+                fecha = f"{partes[1]}-{partes[2]}-{partes[3]}"
+                s3_url = f"https://propiedades-morelos-imagenes.s3.amazonaws.com/{fecha}/{imagen_nombre}"
+            else:
+                s3_url = f"https://propiedades-morelos-imagenes.s3.amazonaws.com/2025-05-30/{imagen_nombre}"
+        else:
+            s3_url = f"https://propiedades-morelos-imagenes.s3.amazonaws.com/2025-05-30/{imagen_nombre}"
+        
+        print(f"🖼️ Proxy imagen: {s3_url}")
+        
+        # Descargar imagen de S3
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.get(s3_url)
+            
+            if response.status_code == 200:
+                # Servir imagen con headers correctos
+                return Response(
+                    content=response.content,
+                    media_type="image/jpeg",
+                    headers={
+                        "Cache-Control": "public, max-age=3600",
+                        "Access-Control-Allow-Origin": "*"
+                    }
+                )
+            else:
+                print(f"❌ Error S3: {response.status_code}")
+                # Imagen placeholder SVG
+                placeholder_svg = '''<svg width="300" height="200" viewBox="0 0 300 200" xmlns="http://www.w3.org/2000/svg">
+                    <rect width="300" height="200" fill="#f3f4f6"/>
+                    <text x="150" y="100" text-anchor="middle" fill="#9ca3af" font-family="Arial" font-size="16">Sin Imagen</text>
+                </svg>'''
+                return Response(
+                    content=placeholder_svg,
+                    media_type="image/svg+xml"
+                )
+                
+    except Exception as e:
+        print(f"❌ Error proxy imagen: {e}")
+        # Imagen placeholder en caso de error
+        placeholder_svg = '''<svg width="300" height="200" viewBox="0 0 300 200" xmlns="http://www.w3.org/2000/svg">
+            <rect width="300" height="200" fill="#f3f4f6"/>
+            <text x="150" y="100" text-anchor="middle" fill="#9ca3af" font-family="Arial" font-size="16">Error Imagen</text>
+        </svg>'''
+        return Response(
+            content=placeholder_svg,
+            media_type="image/svg+xml"
+        )
 
 # =====================================================
 # INICIAR APLICACIÓN
