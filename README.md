@@ -72,3 +72,23 @@ python -m http.server 8080
 # PORT variable added Fri Jun 20 09:47:29 CST 2025
 # Final deployment Fri Jun 20 09:51:08 CST 2025
 # Trigger redeploy Fri Jun 20 11:52:37 CST 2025
+
+# Sistema Inmobiliario Railway
+
+Sistema completo de propiedades inmobiliarias con FastAPI y PostgreSQL.
+
+## Características
+
+- API REST con FastAPI
+- Base de datos PostgreSQL
+- Frontend responsivo
+- Imágenes en AWS S3
+- Filtros avanzados
+- Paginación
+
+## Despliegue
+
+Configurado para Railway con Dockerfile.
+
+## Última actualización
+- 22 de junio 2025 15:35 - CORRECCIÓN CRÍTICA IMÁGENES APLICADA ✅
