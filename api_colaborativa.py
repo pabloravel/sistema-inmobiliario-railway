@@ -9,12 +9,14 @@ CORRECCIONES APLICADAS:
 - ✅ PropiedadColaborativa definida antes de su uso
 - ✅ Health check para Railway
 - ✅ Configuración para Railway con DATABASE_URL
+- ✅ HTTPBearer con auto_error=False para permitir acceso sin autenticación
 """
 
 from fastapi import FastAPI, HTTPException, Query, Depends, Form, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
 import psycopg2
@@ -79,8 +81,8 @@ else:
         'port': int(os.getenv('DB_PORT', 5432))
     }
 
-# Seguridad
-security = HTTPBearer()
+# Seguridad - CORRECCIÓN APLICADA: auto_error=False
+security = HTTPBearer(auto_error=False)
 
 # Ciudades válidas de Morelos
 CIUDADES_MORELOS = {
@@ -94,7 +96,7 @@ CIUDADES_MORELOS = {
 
 def validar_email(email: str) -> bool:
     """Validador de email simple sin dependencias externas"""
-    pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$'
+    pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
     return re.match(pattern, email) is not None
 
 # =====================================================
@@ -248,7 +250,7 @@ def generar_url_imagen(nombre_imagen: str) -> str:
         return f"resultados/{nombre_imagen}"
 
 async def get_current_user_optional(credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)):
-    """Obtener usuario actual (opcional)"""
+    """Obtener usuario actual (opcional) - CORREGIDO para Railway"""
     if not credentials:
         return None
     
@@ -261,12 +263,12 @@ async def get_current_user_optional(credentials: Optional[HTTPAuthorizationCrede
         return None
     
     try:
-        conn = get_db_connection()
-        cursor = conn.cursor(cursor_factory=RealDictCursor)
+    conn = get_db_connection()
+    cursor = conn.cursor(cursor_factory=RealDictCursor)
         cursor.execute("SELECT * FROM usuarios WHERE email = %s AND activo = true", (email,))
         user_data = cursor.fetchone()
-        conn.close()
-        
+    conn.close()
+    
         if user_data:
             return Usuario(**user_data)
         return None
@@ -284,15 +286,15 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(securit
         raise HTTPException(status_code=401, detail="Token inválido")
     
     try:
-        conn = get_db_connection()
-        cursor = conn.cursor(cursor_factory=RealDictCursor)
+    conn = get_db_connection()
+    cursor = conn.cursor(cursor_factory=RealDictCursor)
         cursor.execute("SELECT * FROM usuarios WHERE email = %s AND activo = true", (email,))
         user_data = cursor.fetchone()
-        conn.close()
-        
+    conn.close()
+    
         if not user_data:
-            raise HTTPException(status_code=401, detail="Usuario no encontrado")
-        
+        raise HTTPException(status_code=401, detail="Usuario no encontrado")
+    
         return Usuario(**user_data)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error de base de datos: {str(e)}")
@@ -327,7 +329,7 @@ async def listar_propiedades(
     por_pagina: int = Query(60, ge=1, le=500, description="Propiedades por página"),
     precio_min: Optional[float] = Query(1, description="Precio mínimo")
 ):
-    """Listar propiedades con filtros básicos"""
+    """Listar propiedades con filtros básicos - SIN AUTENTICACIÓN REQUERIDA"""
     inicio = time.time()
     
     try:
@@ -336,17 +338,17 @@ async def listar_propiedades(
         
         # Consulta base con filtro de precio mínimo
         query_base = """
-        SELECT 
+    SELECT 
             id, titulo, descripcion, precio, ciudad, tipo_operacion, 
             tipo_propiedad, imagen, direccion, estado, link, 
             recamaras, banos, estacionamientos, superficie_m2,
             amenidades, caracteristicas, created_at
-        FROM propiedades 
+    FROM propiedades 
         WHERE activo = true AND precio >= %s
         ORDER BY created_at DESC
-        LIMIT %s OFFSET %s
-        """
-        
+    LIMIT %s OFFSET %s
+    """
+    
         query_count = "SELECT COUNT(*) FROM propiedades WHERE activo = true AND precio >= %s"
         
         offset = (pagina - 1) * por_pagina
@@ -354,17 +356,17 @@ async def listar_propiedades(
         # Contar total
         cursor.execute(query_count, (precio_min,))
         total = cursor.fetchone()['count']
-        
+    
         # Obtener propiedades
         cursor.execute(query_base, (precio_min, por_pagina, offset))
         propiedades_data = cursor.fetchall()
         
         conn.close()
-        
-        # Procesar resultados
-        propiedades = []
+    
+    # Procesar resultados
+    propiedades = []
         for prop in propiedades_data:
-            prop_dict = dict(prop)
+        prop_dict = dict(prop)
             
             # Generar URL de imagen
             if prop_dict.get('imagen'):
@@ -373,20 +375,20 @@ async def listar_propiedades(
                 prop_dict['imagen_url'] = None
             
             prop_dict['es_favorito'] = False
-            propiedades.append(PropiedadResumen(**prop_dict))
-        
+        propiedades.append(PropiedadResumen(**prop_dict))
+    
         tiempo_ms = (time.time() - inicio) * 1000
-        total_paginas = (total + por_pagina - 1) // por_pagina
-        
-        return RespuestaPaginada(
-            propiedades=propiedades,
-            total=total,
-            pagina=pagina,
-            por_pagina=por_pagina,
-            total_paginas=total_paginas,
-            tiempo_consulta_ms=tiempo_ms
-        )
-        
+    total_paginas = (total + por_pagina - 1) // por_pagina
+    
+    return RespuestaPaginada(
+        propiedades=propiedades,
+        total=total,
+        pagina=pagina,
+        por_pagina=por_pagina,
+        total_paginas=total_paginas,
+        tiempo_consulta_ms=tiempo_ms
+    )
+
     except Exception as e:
         logger.error(f"Error en listar_propiedades: {e}")
         raise HTTPException(status_code=500, detail=f"Error al obtener propiedades: {str(e)}")
@@ -399,12 +401,12 @@ async def obtener_propiedad(propiedad_id: str):
         cursor = conn.cursor(cursor_factory=RealDictCursor)
         
         cursor.execute("""
-            SELECT 
+    SELECT 
                 id, titulo, precio, ciudad, tipo_operacion, tipo_propiedad,
                 descripcion, link, imagen, direccion, estado, recamaras, banos,
                 estacionamientos, superficie_m2, amenidades, caracteristicas,
                 imagenes, created_at
-            FROM propiedades 
+    FROM propiedades 
             WHERE id = %s AND activo = true
         """, (propiedad_id,))
         
@@ -457,8 +459,8 @@ async def obtener_estadisticas():
         tipos_operacion = {item['tipo_operacion']: item['cantidad'] for item in tipos_operacion_data}
         
         tiempo_ms = (time.time() - inicio) * 1000
-        
-        return {
+    
+    return {
             "total_propiedades": total_propiedades,
             "con_precio": con_precio,
             "precio_promedio": float(precios['promedio']) if precios['promedio'] else 0,
@@ -590,7 +592,7 @@ async def crear_propiedad_colaborativa(
         cursor.execute("""
             INSERT INTO propiedades (
                 id, titulo, descripcion, precio, tipo_propiedad, tipo_operacion,
-                ciudad, estado, direccion, recamaras, banos, estacionamientos,
+             ciudad, estado, direccion, recamaras, banos, estacionamientos,
                 superficie_m2, telefono_contacto, email_contacto, usuario_id,
                 activo, created_at
             ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
