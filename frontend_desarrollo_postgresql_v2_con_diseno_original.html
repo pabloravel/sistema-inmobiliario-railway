@@ -918,12 +918,17 @@
             const titulo = `${tipoPropiedad} en ${ciudad}`;
             const precio = formatPrice(property.precio);
             const ubicacion = getLocation(property);
-            const imagen = property.imagen_url || "https://via.placeholder.com/300x200?text=Sin+Imagen";
+            // SOLUCIÓN DEFINITIVA: Usar proxy de imágenes del mismo dominio
+            const imagen = property.imagen_url || "";
             
-            // Validación adicional del sistema funcional
-            const imagenFinal = imagen && imagen !== 'null' && imagen !== '' && imagen.startsWith('http') 
-                ? imagen 
-                : "https://via.placeholder.com/300x200?text=Sin+Imagen";
+            let imagenFinal;
+            if (imagen && imagen !== 'null' && imagen !== '' && imagen.includes('s3.amazonaws.com')) {
+                // Extraer path de S3 y usar proxy local
+                const s3Path = imagen.split('s3.amazonaws.com/')[1];
+                imagenFinal = `${API_BASE}/imagen/${s3Path}`;
+            } else {
+                imagenFinal = "https://via.placeholder.com/300x200?text=Sin+Imagen";
+            }
             const tipoOperacion = property.tipo_operacion || 'Sin especificar';
             
             showDebugInfo(`Creando tarjeta para: ${titulo} - ${precio} - ${ubicacion}`);
