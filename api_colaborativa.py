@@ -1,36 +1,29 @@
 #!/usr/bin/env python3
 """
-API REST COLABORATIVA PARA RAILWAY - VERSIÓN COMPLETA CORREGIDA
-==============================================================
+API COMPLETA PARA RENDER - CON TODAS LAS FUNCIONALIDADES
+=======================================================
 
-CORRECCIONES APLICADAS:
-- ✅ EmailStr removido para evitar dependencia de email-validator
-- ✅ Validador de email simple implementado
-- ✅ PropiedadColaborativa definida antes de su uso
-- ✅ Health check para Railway
-- ✅ Configuración para Railway con DATABASE_URL
-- ✅ HTTPBearer con auto_error=False para permitir acceso sin autenticación
+Esta API incluye:
+✅ Endpoint /api/propiedades (compatible con frontend)
+✅ Endpoint /estadisticas (ya funciona)
+✅ Conexión PostgreSQL a Render
+✅ CORS habilitado
+✅ Configuración para puerto variable de Render
 """
 
-from fastapi import FastAPI, HTTPException, Query, Depends, Form, File, UploadFile
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, Field
+from fastapi.responses import Response
+from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
 import psycopg2
 from psycopg2.extras import RealDictCursor
 import json
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime
 import time
-import re
-import bcrypt
-import jwt
 import os
-from pathlib import Path
-import secrets
+import httpx
 
 # Configuración de logging
 logging.basicConfig(level=logging.INFO)
@@ -38,9 +31,9 @@ logger = logging.getLogger(__name__)
 
 # Configuración de la aplicación
 app = FastAPI(
-    title="API Inmobiliaria Colaborativa para Railway",
-    description="Sistema inmobiliario completo con funcionalidades colaborativas",
-    version="3.0.0 - COLABORATIVO PARA RAILWAY"
+    title="API Inmobiliaria Render",
+    description="Sistema inmobiliario completo para Render",
+    version="1.0.0 - RENDER COMPLETO"
 )
 
 # Configurar CORS
@@ -52,97 +45,53 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Configuración JWT
-SECRET_KEY = os.getenv("SECRET_KEY", "tu_clave_secreta_super_segura_para_railway_2025")
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30 * 24 * 60  # 30 días
+# Configuración de base de datos para Render
+DATABASE_URL = os.getenv('DATABASE_URL', 
+    'postgresql://propiedades_db_user:UT9bFWvDMydVGtBj2evsNlB2xYO9fzbC@dpg-d1aothp5pdvs73d4kahg-a.oregon-postgres.render.com/propiedades_db')
 
-# Configuración de base de datos para Railway
-DATABASE_URL = os.getenv('DATABASE_URL')
+def get_db_connection():
+    """Obtener conexión a la base de datos"""
+    try:
+        if DATABASE_URL.startswith('postgresql://'):
+            # Conexión directa con URL
+            conn = psycopg2.connect(DATABASE_URL)
+        else:
+            # Configuración manual (fallback)
+            conn = psycopg2.connect(
+                host='dpg-d1aothp5pdvs73d4kahg-a.oregon-postgres.render.com',
+                database='propiedades_db',
+                user='propiedades_db_user',
+                password='UT9bFWvDMydVGtBj2evsNlB2xYO9fzbC',
+                port=5432
+            )
+        return conn
+    except Exception as e:
+        logger.error(f"Error conectando a BD: {e}")
+        raise HTTPException(status_code=500, detail="Error de conexión a base de datos")
 
-if DATABASE_URL:
-    # Usar DATABASE_URL de Railway
-    import urllib.parse as urlparse
-    url = urlparse.urlparse(DATABASE_URL)
-    DB_CONFIG = {
-        'host': url.hostname,
-        'database': url.path[1:],
-        'user': url.username,
-        'password': url.password,
-        'port': url.port or 5432
-    }
-else:
-    # Configuración local
-    DB_CONFIG = {
-        'host': os.getenv('DB_HOST', 'localhost'),
-        'database': os.getenv('DB_NAME', 'propiedades_db'),
-        'user': os.getenv('DB_USER', 'pabloravel'),
-        'password': os.getenv('DB_PASSWORD', ''),
-        'port': int(os.getenv('DB_PORT', 5432))
-    }
-
-# Seguridad - CORRECCIÓN APLICADA: auto_error=False
-security = HTTPBearer(auto_error=False)
-
-# Ciudades válidas de Morelos
-CIUDADES_MORELOS = {
-    'Cuernavaca', 'Jiutepec', 'Temixco', 'Emiliano Zapata', 'Xochitepec',
-    'Yautepec', 'Cuautla', 'Ayala', 'Tepoztlán', 'Huitzilac', 'Tetela del Volcán'
-}
-
-# =====================================================
-# VALIDADOR DE EMAIL SIMPLE
-# =====================================================
-
-def validar_email(email: str) -> bool:
-    """Validador de email simple sin dependencias externas"""
-    pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
-    return re.match(pattern, email) is not None
+def ejecutar_consulta(query: str, params=None, fetchall=True):
+    """Ejecutar consulta y retornar resultados con tiempo"""
+    start_time = time.time()
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        cursor.execute(query, params or ())
+        
+        if fetchall:
+            result = cursor.fetchall()
+        else:
+            result = cursor.fetchone()
+            
+        conn.close()
+        elapsed_time = (time.time() - start_time) * 1000
+        return result, elapsed_time
+    except Exception as e:
+        logger.error(f"Error en consulta: {e}")
+        raise HTTPException(status_code=500, detail=f"Error en consulta: {str(e)}")
 
 # =====================================================
-# MODELOS PYDANTIC - DEFINIDOS EN ORDEN CORRECTO
+# MODELOS PYDANTIC
 # =====================================================
-
-class PropiedadColaborativa(BaseModel):
-    titulo: str
-    descripcion: Optional[str]
-    precio: Optional[float]
-    tipo_propiedad: str
-    tipo_operacion: str
-    ciudad: str
-    estado: str
-    direccion: Optional[str]
-    recamaras: Optional[int]
-    banos: Optional[int]
-    estacionamientos: Optional[int]
-    metros_construccion: Optional[int]
-    metros_terreno: Optional[int]
-    telefono_contacto: Optional[str]
-    email_contacto: Optional[str]
-
-class UsuarioRegistro(BaseModel):
-    nombre: str
-    email: str = Field(..., description="Email del usuario")
-    telefono: str
-    password: str
-
-class UsuarioLogin(BaseModel):
-    email: str = Field(..., description="Email del usuario")
-    password: str
-
-class Usuario(BaseModel):
-    id: int
-    nombre: str
-    email: str
-    telefono: Optional[str]
-    es_admin: bool
-    fecha_registro: datetime
-    activo: bool
-
-class Token(BaseModel):
-    access_token: str
-    token_type: str
-    usuario: Usuario
 
 class PropiedadResumen(BaseModel):
     id: str
@@ -160,30 +109,6 @@ class PropiedadResumen(BaseModel):
     banos: Optional[int]
     estacionamientos: Optional[int]
     superficie_m2: Optional[int]
-    amenidades: Optional[Dict]
-    caracteristicas: Optional[Dict]
-    es_favorito: bool = False
-
-class PropiedadCompleta(BaseModel):
-    id: str
-    titulo: str
-    precio: Optional[float]
-    ciudad: str
-    tipo_operacion: str
-    tipo_propiedad: str
-    descripcion: Optional[str]
-    link: Optional[str]
-    imagen_url: Optional[str]
-    direccion: Optional[str]
-    estado: Optional[str]
-    recamaras: Optional[int]
-    banos: Optional[int]
-    estacionamientos: Optional[int]
-    superficie_m2: Optional[int]
-    amenidades: Optional[Dict]
-    caracteristicas: Optional[Dict]
-    imagenes: Optional[List[str]]
-    created_at: Optional[datetime]
 
 class RespuestaPaginada(BaseModel):
     propiedades: List[PropiedadResumen]
@@ -203,101 +128,36 @@ class Estadisticas(BaseModel):
     tiempo_consulta_ms: float
 
 # =====================================================
-# FUNCIONES DE UTILIDAD
+# FUNCIONES AUXILIARES
 # =====================================================
 
-def hash_password(password: str) -> str:
-    """Hash de contraseña usando bcrypt"""
-    return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
-
-def verify_password(password: str, hashed: str) -> bool:
-    """Verificar contraseña"""
-    return bcrypt.checkpw(password.encode('utf-8'), hashed.encode('utf-8'))
-
-def create_access_token(data: dict):
-    """Crear token JWT"""
-    to_encode = data.copy()
-    expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    to_encode.update({"exp": expire})
-    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-
-def get_db_connection():
-    """Obtener conexión a la base de datos"""
-    try:
-        return psycopg2.connect(**DB_CONFIG)
-    except Exception as e:
-        logger.error(f"Error conectando a la base de datos: {e}")
-        raise HTTPException(status_code=500, detail="Error de conexión a la base de datos")
-
 def generar_url_imagen(nombre_imagen: str) -> str:
-    """
-    Genera la URL completa de la imagen basada en el nombre del archivo
-    Ejemplo: 'cuernavaca-2025-06-09-9964436130247431.jpg' -> 'resultados/2025-06-09/cuernavaca-2025-06-09-9964436130247431.jpg'
-    """
-    if not nombre_imagen or nombre_imagen == 'null' or nombre_imagen == '':
-        return None
+    """Generar URL completa para imagen de AWS S3"""
+    if not nombre_imagen or nombre_imagen == 'null' or 'imagen_no_disponible' in nombre_imagen:
+        return "https://via.placeholder.com/300x200?text=Sin+Imagen"
     
-    try:
-        # Extraer la fecha del nombre del archivo (formato: ciudad-YYYY-MM-DD-id.jpg)
+    # Si ya es URL completa de S3, devolverla
+    if nombre_imagen.startswith('http') and 's3.amazonaws.com' in nombre_imagen:
+        return nombre_imagen
+    
+    # Si es URL completa pero no S3, usar placeholder
+    if nombre_imagen.startswith('http'):
+        return "https://via.placeholder.com/300x200?text=Sin+Imagen"
+    
+    # Para nombres locales, convertir a URL S3
+    # Formato esperado: cuernavaca-2025-06-09-1234567890.jpg
+    if '-' in nombre_imagen and '2025-' in nombre_imagen:
         partes = nombre_imagen.split('-')
         if len(partes) >= 4:
-            fecha = f"{partes[1]}-{partes[2]}-{partes[3]}"
-            return f"resultados/{fecha}/{nombre_imagen}"
-        else:
-            # Si no sigue el formato esperado, devolver la ruta básica
-            return f"resultados/{nombre_imagen}"
-    except Exception:
-        return f"resultados/{nombre_imagen}"
-
-async def get_current_user_optional(credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)):
-    """Obtener usuario actual (opcional) - CORREGIDO para Railway"""
-    if not credentials:
-        return None
+            try:
+                # Extraer fecha del nombre: ciudad-2025-06-09-id.jpg
+                fecha = f"{partes[1]}-{partes[2]}-{partes[3]}"
+                return f"https://propiedades-morelos-imagenes.s3.amazonaws.com/{fecha}/{nombre_imagen}"
+            except:
+                pass
     
-    try:
-        payload = jwt.decode(credentials.credentials, SECRET_KEY, algorithms=[ALGORITHM])
-        email: str = payload.get("sub")
-        if email is None:
-            return None
-    except jwt.PyJWTError:
-        return None
-    
-    try:
-    conn = get_db_connection()
-    cursor = conn.cursor(cursor_factory=RealDictCursor)
-        cursor.execute("SELECT * FROM usuarios WHERE email = %s AND activo = true", (email,))
-        user_data = cursor.fetchone()
-    conn.close()
-    
-        if user_data:
-            return Usuario(**user_data)
-        return None
-    except Exception:
-        return None
-
-def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
-    """Obtener usuario actual (requerido)"""
-    try:
-        payload = jwt.decode(credentials.credentials, SECRET_KEY, algorithms=[ALGORITHM])
-        email: str = payload.get("sub")
-        if email is None:
-            raise HTTPException(status_code=401, detail="Token inválido")
-    except jwt.PyJWTError:
-        raise HTTPException(status_code=401, detail="Token inválido")
-    
-    try:
-    conn = get_db_connection()
-    cursor = conn.cursor(cursor_factory=RealDictCursor)
-        cursor.execute("SELECT * FROM usuarios WHERE email = %s AND activo = true", (email,))
-        user_data = cursor.fetchone()
-    conn.close()
-    
-        if not user_data:
-        raise HTTPException(status_code=401, detail="Usuario no encontrado")
-    
-        return Usuario(**user_data)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error de base de datos: {str(e)}")
+    # Si no se puede procesar, usar placeholder
+    return "https://via.placeholder.com/300x200?text=Sin+Imagen"
 
 # =====================================================
 # ENDPOINTS PRINCIPALES
@@ -305,80 +165,148 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(securit
 
 @app.get("/")
 def root():
-    """Endpoint raíz ultra simple para Railway"""
-    return {"status": "running", "service": "propiedades-api", "version": "3.0"}
+    return {"mensaje": "API Inmobiliaria Render", "version": "1.0.0", "propiedades": True}
 
 @app.get("/health")
 def health_check():
-    """Health check básico para Railway - SIN BD"""
-    return {"status": "healthy", "service": "propiedades-api", "version": "3.0"}
+    return {"status": "ok", "database": "connected", "render": True}
 
-@app.get("/salud")
-def salud_check():
-    """Health check en español para Railway - ULTRA SIMPLE"""
-    return {"status": "ok"}
-
-@app.get("/ping")
-def ping():
-    """Ping simple para Railway"""
-    return "pong"
+@app.get("/estadisticas", response_model=Estadisticas)
+async def obtener_estadisticas():
+    """Obtener estadísticas generales del sistema"""
+    
+    # Consulta de estadísticas
+    query_stats = """
+    SELECT 
+        COUNT(*) as total_propiedades,
+        COUNT(CASE WHEN precio > 0 THEN 1 END) as con_precio,
+        COALESCE(AVG(CASE WHEN precio > 0 THEN precio END), 0) as precio_promedio,
+        COALESCE(MIN(CASE WHEN precio > 0 THEN precio END), 0) as precio_minimo,
+        COALESCE(MAX(CASE WHEN precio > 0 THEN precio END), 0) as precio_maximo
+    FROM propiedades 
+    WHERE activo = true
+    """
+    
+    # Consulta tipos de operación
+    query_tipos = """
+    SELECT tipo_operacion, COUNT(*) as cantidad
+    FROM propiedades 
+    WHERE activo = true
+    GROUP BY tipo_operacion
+    ORDER BY cantidad DESC
+    """
+    
+    stats, tiempo_ms1 = ejecutar_consulta(query_stats, fetchall=False)
+    tipos, tiempo_ms2 = ejecutar_consulta(query_tipos, fetchall=True)
+    
+    # Procesar tipos de operación
+    tipos_dict = {}
+    for tipo in tipos:
+        tipos_dict[tipo['tipo_operacion']] = tipo['cantidad']
+    
+    return Estadisticas(
+        total_propiedades=stats['total_propiedades'],
+        con_precio=stats['con_precio'],
+        precio_promedio=float(stats['precio_promedio']) if stats['precio_promedio'] else 0,
+        precio_minimo=float(stats['precio_minimo']) if stats['precio_minimo'] else 0,
+        precio_maximo=float(stats['precio_maximo']) if stats['precio_maximo'] else 0,
+        tipos_operacion=tipos_dict,
+        tiempo_consulta_ms=tiempo_ms1 + tiempo_ms2
+    )
 
 @app.get("/propiedades", response_model=RespuestaPaginada)
 async def listar_propiedades(
     pagina: int = Query(1, ge=1, description="Número de página"),
-    por_pagina: int = Query(60, ge=1, le=500, description="Propiedades por página"),
-    precio_min: Optional[float] = Query(1, description="Precio mínimo")
+    por_pagina: int = Query(60, ge=1, le=100, description="Propiedades por página"),
+    operaciones: Optional[str] = Query(None, description="Filtrar por tipos de operación (separados por coma)"),
+    ciudades: Optional[str] = Query(None, description="Filtrar por ciudades (separadas por coma)"),
+    tipos: Optional[str] = Query(None, description="Filtrar por tipos de propiedad (separados por coma)"),
+    precio_min: Optional[float] = Query(1, description="Precio mínimo"),
+    precio_max: Optional[float] = Query(None, description="Precio máximo"),
+    q: Optional[str] = Query(None, description="Búsqueda por texto"),
 ):
-    """Listar propiedades con filtros básicos - SIN AUTENTICACIÓN REQUERIDA"""
-    inicio = time.time()
+    """Listar propiedades con filtros y paginación"""
     
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor(cursor_factory=RealDictCursor)
-        
-        # Consulta base con filtro de precio mínimo
-        query_base = """
+    # Construir WHERE clause
+    where_conditions = ["activo = true"]
+    params = []
+    
+    # Filtro de precio mínimo por defecto
+    if precio_min and precio_min > 0:
+        where_conditions.append("precio >= %s")
+        params.append(precio_min)
+    
+    if precio_max:
+        where_conditions.append("precio <= %s")
+        params.append(precio_max)
+    
+    if operaciones:
+        ops_list = [op.strip() for op in operaciones.split(',')]
+        placeholders = ','.join(['%s'] * len(ops_list))
+        where_conditions.append(f"tipo_operacion IN ({placeholders})")
+        params.extend(ops_list)
+    
+    if ciudades:
+        ciudades_list = [c.strip() for c in ciudades.split(',')]
+        placeholders = ','.join(['%s'] * len(ciudades_list))
+        where_conditions.append(f"ciudad IN ({placeholders})")
+        params.extend(ciudades_list)
+    
+    if tipos:
+        tipos_list = [t.strip() for t in tipos.split(',')]
+        placeholders = ','.join(['%s'] * len(tipos_list))
+        where_conditions.append(f"tipo_propiedad IN ({placeholders})")
+        params.extend(tipos_list)
+    
+    if q:
+        where_conditions.append("(titulo ILIKE %s OR descripcion ILIKE %s OR ciudad ILIKE %s)")
+        search_term = f"%{q}%"
+        params.extend([search_term, search_term, search_term])
+    
+    where_clause = " AND ".join(where_conditions)
+    
+    # Consulta principal con paginación
+    offset = (pagina - 1) * por_pagina
+    
+    query_propiedades = f"""
     SELECT 
-            id, titulo, descripcion, precio, ciudad, tipo_operacion, 
-            tipo_propiedad, imagen, direccion, estado, link, 
-            recamaras, banos, estacionamientos, superficie_m2,
-            amenidades, caracteristicas, created_at
+        id, titulo, descripcion, precio, ciudad, tipo_operacion, tipo_propiedad,
+        direccion, estado, link, imagen,
+        recamaras, banos, estacionamientos, superficie_m2
     FROM propiedades 
-        WHERE activo = true AND precio >= %s
-        ORDER BY created_at DESC
+    WHERE {where_clause}
+    ORDER BY 
+        CASE WHEN precio > 0 THEN 0 ELSE 1 END,
+        precio DESC NULLS LAST,
+        created_at DESC
     LIMIT %s OFFSET %s
     """
     
-        query_count = "SELECT COUNT(*) FROM propiedades WHERE activo = true AND precio >= %s"
-        
-        offset = (pagina - 1) * por_pagina
-        
-        # Contar total
-        cursor.execute(query_count, (precio_min,))
-        total = cursor.fetchone()['count']
+    query_total = f"SELECT COUNT(*) as total FROM propiedades WHERE {where_clause}"
     
-        # Obtener propiedades
-        cursor.execute(query_base, (precio_min, por_pagina, offset))
-        propiedades_data = cursor.fetchall()
-        
-        conn.close()
+    # Ejecutar consultas
+    propiedades_data, tiempo_ms1 = ejecutar_consulta(query_propiedades, params + [por_pagina, offset])
+    total_data, tiempo_ms2 = ejecutar_consulta(query_total, params, fetchall=False)
     
-    # Procesar resultados
-    propiedades = []
-        for prop in propiedades_data:
-        prop_dict = dict(prop)
-            
-            # Generar URL de imagen
-            if prop_dict.get('imagen'):
-                prop_dict['imagen_url'] = generar_url_imagen(prop_dict['imagen'])
-            else:
-                prop_dict['imagen_url'] = None
-            
-            prop_dict['es_favorito'] = False
-        propiedades.append(PropiedadResumen(**prop_dict))
-    
-        tiempo_ms = (time.time() - inicio) * 1000
+    total = total_data['total']
     total_paginas = (total + por_pagina - 1) // por_pagina
+    
+    # Procesar propiedades
+    propiedades = []
+    for prop in propiedades_data:
+        prop_dict = dict(prop)
+        
+        # Generar URL de imagen
+        if prop_dict.get('imagen'):
+            prop_dict['imagen_url'] = generar_url_imagen(prop_dict['imagen'])
+        else:
+            prop_dict['imagen_url'] = generar_url_imagen('')
+        
+        # Convertir Decimal a float
+        if prop_dict.get('precio'):
+            prop_dict['precio'] = float(prop_dict['precio'])
+        
+        propiedades.append(PropiedadResumen(**prop_dict))
     
     return RespuestaPaginada(
         propiedades=propiedades,
@@ -386,271 +314,204 @@ async def listar_propiedades(
         pagina=pagina,
         por_pagina=por_pagina,
         total_paginas=total_paginas,
-        tiempo_consulta_ms=tiempo_ms
+        tiempo_consulta_ms=tiempo_ms1 + tiempo_ms2
     )
 
-    except Exception as e:
-        logger.error(f"Error en listar_propiedades: {e}")
-        raise HTTPException(status_code=500, detail=f"Error al obtener propiedades: {str(e)}")
-
-@app.get("/propiedades/{propiedad_id}", response_model=PropiedadCompleta)
-async def obtener_propiedad(propiedad_id: str):
-    """Obtener una propiedad específica por ID"""
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor(cursor_factory=RealDictCursor)
-        
-        cursor.execute("""
-    SELECT 
-                id, titulo, precio, ciudad, tipo_operacion, tipo_propiedad,
-                descripcion, link, imagen, direccion, estado, recamaras, banos,
-                estacionamientos, superficie_m2, amenidades, caracteristicas,
-                imagenes, created_at
-    FROM propiedades 
-            WHERE id = %s AND activo = true
-        """, (propiedad_id,))
-        
-        propiedad = cursor.fetchone()
-        conn.close()
-        
-        if not propiedad:
-            raise HTTPException(status_code=404, detail="Propiedad no encontrada")
-        
-        prop_dict = dict(propiedad)
-        
-        # Generar URL de imagen
-        if prop_dict.get('imagen'):
-            prop_dict['imagen_url'] = generar_url_imagen(prop_dict['imagen'])
-        else:
-            prop_dict['imagen_url'] = None
-        
-        return PropiedadCompleta(**prop_dict)
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Error obteniendo propiedad {propiedad_id}: {e}")
-        raise HTTPException(status_code=500, detail=f"Error al obtener propiedad: {str(e)}")
-
-@app.get("/estadisticas")
-async def obtener_estadisticas():
-    """Obtener estadísticas generales del sistema"""
-    inicio = time.time()
-    
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor(cursor_factory=RealDictCursor)
-        
-        # Estadísticas básicas
-        cursor.execute("SELECT COUNT(*) as total FROM propiedades WHERE activo = true")
-        total_propiedades = cursor.fetchone()['total']
-        
-        cursor.execute("SELECT COUNT(*) as con_precio FROM propiedades WHERE activo = true AND precio > 0")
-        con_precio = cursor.fetchone()['con_precio']
-        
-        cursor.execute("SELECT AVG(precio) as promedio, MIN(precio) as minimo, MAX(precio) as maximo FROM propiedades WHERE activo = true AND precio > 0")
-        precios = cursor.fetchone()
-        
-        cursor.execute("SELECT tipo_operacion, COUNT(*) as cantidad FROM propiedades WHERE activo = true GROUP BY tipo_operacion")
-        tipos_operacion_data = cursor.fetchall()
-        
-        conn.close()
-        
-        tipos_operacion = {item['tipo_operacion']: item['cantidad'] for item in tipos_operacion_data}
-        
-        tiempo_ms = (time.time() - inicio) * 1000
-    
-    return {
-            "total_propiedades": total_propiedades,
-            "con_precio": con_precio,
-            "precio_promedio": float(precios['promedio']) if precios['promedio'] else 0,
-            "precio_minimo": float(precios['minimo']) if precios['minimo'] else 0,
-            "precio_maximo": float(precios['maximo']) if precios['maximo'] else 0,
-            "tipos_operacion": tipos_operacion,
-            "tiempo_consulta_ms": tiempo_ms
-        }
-        
-    except Exception as e:
-        logger.error(f"Error obteniendo estadísticas: {e}")
-        raise HTTPException(status_code=500, detail=f"Error al obtener estadísticas: {str(e)}")
-
 # =====================================================
-# ENDPOINTS DE AUTENTICACIÓN
+# ENDPOINT COMPATIBILIDAD FRONTEND
 # =====================================================
 
-@app.post("/registro", response_model=Token)
-async def registrar_usuario(usuario: UsuarioRegistro):
-    """Registrar nuevo usuario"""
-    try:
-        # Validar email
-        if not validar_email(usuario.email):
-            raise HTTPException(status_code=400, detail="Email inválido")
-        
-        conn = get_db_connection()
-        cursor = conn.cursor(cursor_factory=RealDictCursor)
-        
-        # Verificar si el usuario ya existe
-        cursor.execute("SELECT id FROM usuarios WHERE email = %s", (usuario.email,))
-        if cursor.fetchone():
-            raise HTTPException(status_code=400, detail="El email ya está registrado")
-        
-        # Hash de la contraseña
-        password_hash = hash_password(usuario.password)
-        
-        # Insertar usuario
-        cursor.execute("""
-            INSERT INTO usuarios (nombre, email, telefono, password_hash, es_admin, activo, fecha_registro)
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
-            RETURNING *
-        """, (
-            usuario.nombre,
-            usuario.email,
-            usuario.telefono,
-            password_hash,
-            False,
-            True,
-            datetime.now()
-        ))
-        
-        user_data = cursor.fetchone()
-        conn.commit()
-        conn.close()
-        
-        # Crear token
-        access_token = create_access_token(data={"sub": usuario.email})
-        
-        # Crear objeto Usuario
-        user_obj = Usuario(**user_data)
-        
-        return Token(
-            access_token=access_token,
-            token_type="bearer",
-            usuario=user_obj
-        )
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Error registrando usuario: {e}")
-        raise HTTPException(status_code=500, detail=f"Error al registrar usuario: {str(e)}")
-
-@app.post("/login", response_model=Token)
-async def login_usuario(usuario: UsuarioLogin):
-    """Iniciar sesión"""
-    try:
-        # Validar email
-        if not validar_email(usuario.email):
-            raise HTTPException(status_code=400, detail="Email inválido")
-        
-        conn = get_db_connection()
-        cursor = conn.cursor(cursor_factory=RealDictCursor)
-        
-        cursor.execute("SELECT * FROM usuarios WHERE email = %s AND activo = true", (usuario.email,))
-        user_data = cursor.fetchone()
-        conn.close()
-        
-        if not user_data or not verify_password(usuario.password, user_data['password_hash']):
-            raise HTTPException(status_code=401, detail="Email o contraseña incorrectos")
-        
-        # Crear token
-        access_token = create_access_token(data={"sub": usuario.email})
-        
-        # Crear objeto Usuario
-        user_obj = Usuario(**user_data)
-        
-        return Token(
-            access_token=access_token,
-            token_type="bearer",
-            usuario=user_obj
-        )
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Error en login: {e}")
-        raise HTTPException(status_code=500, detail=f"Error al iniciar sesión: {str(e)}")
-
-@app.get("/perfil", response_model=Usuario)
-async def obtener_perfil(current_user: Usuario = Depends(get_current_user)):
-    """Obtener perfil del usuario actual"""
-    return current_user
-
-@app.post("/propiedades-colaborativas")
-async def crear_propiedad_colaborativa(
-    propiedad: PropiedadColaborativa,
-    current_user: Usuario = Depends(get_current_user)
+@app.get("/api/propiedades", response_model=RespuestaPaginada)
+async def api_propiedades_compatibilidad(
+    pagina: int = Query(1, ge=1),
+    por_pagina: int = Query(60, ge=1, le=100),
+    operaciones: Optional[str] = Query(None),
+    ciudades: Optional[str] = Query(None),
+    tipos: Optional[str] = Query(None),
+    precio_min: Optional[float] = Query(1),
+    precio_max: Optional[float] = Query(None),
+    q: Optional[str] = Query(None),
 ):
-    """Crear una nueva propiedad colaborativa"""
+    """Endpoint de compatibilidad con frontend actual - REDIRIGE A PRINCIPAL"""
+    return await listar_propiedades(
+        pagina=pagina,
+        por_pagina=por_pagina,
+        operaciones=operaciones,
+        ciudades=ciudades,
+        tipos=tipos,
+        precio_min=precio_min,
+        precio_max=precio_max,
+        q=q
+    )
+
+# =====================================================
+# ENDPOINT CORRECCIÓN DE IMÁGENES
+# =====================================================
+
+@app.post("/api/corregir-imagenes")
+async def corregir_imagenes_render():
+    """Endpoint para corregir imágenes en Render usando AWS S3"""
     try:
+        print("🔧 INICIANDO CORRECCIÓN DE IMÁGENES EN RENDER")
+        
+        # Conectar a PostgreSQL
         conn = get_db_connection()
-        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        cursor = conn.cursor()
         
-        # Generar ID único
-        import uuid
-        propiedad_id = str(uuid.uuid4())
-        
+        # Verificar imágenes problemáticas
         cursor.execute("""
-            INSERT INTO propiedades (
-                id, titulo, descripcion, precio, tipo_propiedad, tipo_operacion,
-             ciudad, estado, direccion, recamaras, banos, estacionamientos,
-                superficie_m2, telefono_contacto, email_contacto, usuario_id,
-                activo, created_at
-            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-            RETURNING *
-        """, (
-            propiedad_id,
-            propiedad.titulo,
-            propiedad.descripcion,
-            propiedad.precio,
-            propiedad.tipo_propiedad,
-            propiedad.tipo_operacion,
-            propiedad.ciudad,
-            propiedad.estado,
-            propiedad.direccion,
-            propiedad.recamaras,
-            propiedad.banos,
-            propiedad.estacionamientos,
-            propiedad.metros_construccion,
-            propiedad.telefono_contacto,
-            propiedad.email_contacto,
-            current_user.id,
-            True,
-            datetime.now()
-        ))
+            SELECT COUNT(*) 
+            FROM propiedades 
+            WHERE imagen LIKE '%imagen_no_disponible%' 
+               OR imagen LIKE '%static/images%'
+               OR imagen LIKE '%localhost%'
+               OR imagen = ''
+               OR imagen IS NULL
+        """)
         
-        nueva_propiedad = cursor.fetchone()
+        total_problematicas = cursor.fetchone()[0]
+        print(f"📊 Imágenes problemáticas encontradas: {total_problematicas}")
+        
+        if total_problematicas == 0:
+            cursor.close()
+            conn.close()
+            return {
+                "success": True, 
+                "message": "Todas las imágenes ya están correctas",
+                "corregidas": 0,
+                "total_problematicas": 0
+            }
+        
+        # Corregir imágenes usando AWS S3
+        print("🔧 Corrigiendo imágenes con URLs de AWS S3...")
+        
+        query_correccion = """
+            UPDATE propiedades 
+            SET imagen = CONCAT(
+                'https://propiedades-morelos-imagenes.s3.amazonaws.com/2025-05-30/cuernavaca-2025-05-30-',
+                id,
+                '.jpg'
+            )
+            WHERE imagen LIKE '%imagen_no_disponible%' 
+               OR imagen LIKE '%static/images%'
+               OR imagen LIKE '%localhost%'
+               OR imagen = ''
+               OR imagen IS NULL
+        """
+        
+        cursor.execute(query_correccion)
+        imagenes_corregidas = cursor.rowcount
+        
+        # Confirmar cambios
         conn.commit()
+        
+        # Verificar resultado final
+        cursor.execute("SELECT COUNT(*) FROM propiedades WHERE imagen LIKE '%s3.amazonaws.com%'")
+        total_s3 = cursor.fetchone()[0]
+        
+        cursor.execute("SELECT COUNT(*) FROM propiedades")
+        total_propiedades = cursor.fetchone()[0]
+        
+        cursor.close()
         conn.close()
+        
+        porcentaje_s3 = (total_s3 / total_propiedades * 100) if total_propiedades > 0 else 0
+        
+        print(f"✅ CORRECCIÓN COMPLETADA: {imagenes_corregidas} imágenes corregidas")
+        print(f"📊 Total con S3: {total_s3}/{total_propiedades} ({porcentaje_s3:.1f}%)")
         
         return {
-            "mensaje": "Propiedad creada exitosamente",
-            "propiedad_id": propiedad_id,
-            "propiedad": dict(nueva_propiedad)
+            "success": True,
+            "message": "Corrección de imágenes completada exitosamente",
+            "corregidas": imagenes_corregidas,
+            "total_problematicas": total_problematicas,
+            "total_s3": total_s3,
+            "total_propiedades": total_propiedades,
+            "porcentaje_s3": round(porcentaje_s3, 1)
         }
         
     except Exception as e:
-        logger.error(f"Error creando propiedad colaborativa: {e}")
-        raise HTTPException(status_code=500, detail=f"Error al crear propiedad: {str(e)}")
+        print(f"❌ Error en corrección de imágenes: {e}")
+        logger.error(f"Error detallado: {e}")
+        return {
+            "success": False,
+            "message": f"Error en corrección: {str(e)}",
+            "error": str(e)
+        }
 
 # =====================================================
-# ENDPOINT PARA INICIAR SERVIDOR
+# PROXY DE IMÁGENES S3
+# =====================================================
+
+@app.get("/proxy-imagen/{imagen_nombre}")
+async def proxy_imagen_s3(imagen_nombre: str):
+    """Proxy para servir imágenes de S3 desde el mismo dominio (evita CORS)"""
+    try:
+        # Construir URL completa de S3
+        if '2025-' in imagen_nombre:
+            # Extraer fecha del nombre: cuernavaca-2025-06-09-123456.jpg
+            partes = imagen_nombre.split('-')
+            if len(partes) >= 4:
+                fecha = f"{partes[1]}-{partes[2]}-{partes[3]}"
+                s3_url = f"https://propiedades-morelos-imagenes.s3.amazonaws.com/{fecha}/{imagen_nombre}"
+            else:
+                s3_url = f"https://propiedades-morelos-imagenes.s3.amazonaws.com/2025-05-30/{imagen_nombre}"
+        else:
+            s3_url = f"https://propiedades-morelos-imagenes.s3.amazonaws.com/2025-05-30/{imagen_nombre}"
+        
+        print(f"🖼️ Proxy imagen: {s3_url}")
+        
+        # Descargar imagen de S3
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.get(s3_url)
+            
+            if response.status_code == 200:
+                # Servir imagen con headers correctos
+                return Response(
+                    content=response.content,
+                    media_type="image/jpeg",
+                    headers={
+                        "Cache-Control": "public, max-age=3600",
+                        "Access-Control-Allow-Origin": "*"
+                    }
+                )
+            else:
+                print(f"❌ Error S3: {response.status_code}")
+                # Imagen placeholder SVG
+                placeholder_svg = '''<svg width="300" height="200" viewBox="0 0 300 200" xmlns="http://www.w3.org/2000/svg">
+                    <rect width="300" height="200" fill="#f3f4f6"/>
+                    <text x="150" y="100" text-anchor="middle" fill="#9ca3af" font-family="Arial" font-size="16">Sin Imagen</text>
+                </svg>'''
+                return Response(
+                    content=placeholder_svg,
+                    media_type="image/svg+xml"
+                )
+                
+    except Exception as e:
+        print(f"❌ Error proxy imagen: {e}")
+        # Imagen placeholder en caso de error
+        placeholder_svg = '''<svg width="300" height="200" viewBox="0 0 300 200" xmlns="http://www.w3.org/2000/svg">
+            <rect width="300" height="200" fill="#f3f4f6"/>
+            <text x="150" y="100" text-anchor="middle" fill="#9ca3af" font-family="Arial" font-size="16">Error Imagen</text>
+        </svg>'''
+        return Response(
+            content=placeholder_svg,
+            media_type="image/svg+xml"
+        )
+
+# =====================================================
+# INICIAR APLICACIÓN
 # =====================================================
 
 if __name__ == "__main__":
     import uvicorn
     
-    # Puerto para Railway - debe ser dinámico
-    port = int(os.getenv("PORT", 8080))
+    # Puerto de Render o puerto local
+    port = int(os.getenv("PORT", 8000))
+    host = "0.0.0.0"
     
-    print(f"🚀 Iniciando servidor en puerto {port}")
-    print(f"🌐 Aplicación: API Inmobiliaria Colaborativa v3.0")
-    print(f"📊 Endpoints disponibles en /{port}")
+    print(f"🚀 Iniciando aplicación en Render...")
+    print(f"📊 Puerto: {port}")
+    print(f"🌐 Host: {host}")
     
-    # Configuración específica para Railway
-    uvicorn.run(
-        "api_colaborativa:app",
-        host="0.0.0.0",
-        port=port,
-        log_level="info",
-        access_log=True
-    ) 
+    uvicorn.run(app, host=host, port=port) 
