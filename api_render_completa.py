@@ -132,32 +132,30 @@ class Estadisticas(BaseModel):
 # =====================================================
 
 def generar_url_imagen(nombre_imagen: str) -> str:
-    """Generar URL completa para imagen de AWS S3"""
+    """Generar SOLO nombre de archivo para que el frontend use el proxy"""
     if not nombre_imagen or nombre_imagen == 'null' or 'imagen_no_disponible' in nombre_imagen:
-        return "https://via.placeholder.com/300x200?text=Sin+Imagen"
+        return "placeholder.jpg"
     
-    # Si ya es URL completa de S3, devolverla
+    # Si ya es URL completa de S3, extraer solo el nombre del archivo
     if nombre_imagen.startswith('http') and 's3.amazonaws.com' in nombre_imagen:
-        return nombre_imagen
+        # Extraer solo el nombre del archivo de la URL
+        # https://propiedades-morelos-imagenes.s3.amazonaws.com/2025-05-30/cuernavaca-2025-05-30-3908221572840457.jpg
+        # -> cuernavaca-2025-05-30-3908221572840457.jpg
+        partes = nombre_imagen.split('/')
+        if len(partes) > 0 and partes[-1].endswith('.jpg'):
+            return partes[-1]
+        return "placeholder.jpg"
     
     # Si es URL completa pero no S3, usar placeholder
     if nombre_imagen.startswith('http'):
-        return "https://via.placeholder.com/300x200?text=Sin+Imagen"
+        return "placeholder.jpg"
     
-    # Para nombres locales, convertir a URL S3
-    # Formato esperado: cuernavaca-2025-06-09-1234567890.jpg
-    if '-' in nombre_imagen and '2025-' in nombre_imagen:
-        partes = nombre_imagen.split('-')
-        if len(partes) >= 4:
-            try:
-                # Extraer fecha del nombre: ciudad-2025-06-09-id.jpg
-                fecha = f"{partes[1]}-{partes[2]}-{partes[3]}"
-                return f"https://propiedades-morelos-imagenes.s3.amazonaws.com/{fecha}/{nombre_imagen}"
-            except:
-                pass
+    # Si ya es solo un nombre de archivo, devolverlo
+    if nombre_imagen.endswith('.jpg') or nombre_imagen.endswith('.jpeg') or nombre_imagen.endswith('.png'):
+        return nombre_imagen
     
     # Si no se puede procesar, usar placeholder
-    return "https://via.placeholder.com/300x200?text=Sin+Imagen"
+    return "placeholder.jpg"
 
 # =====================================================
 # ENDPOINTS PRINCIPALES
