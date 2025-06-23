@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🏠 Sistema Inmobiliario - Copiado del Sistema que SÍ Funcionaba</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .properties-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        .property-card {
+            border: 1px solid #e5e7eb;
+            border-radius: 10px;
+            overflow: hidden;
+            background: white;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: transform 0.2s;
+        }
+        .property-card:hover {
+            transform: translateY(-2px);
+        }
+        .property-image {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+        }
+        .property-content {
+            padding: 15px;
+        }
+        .property-title {
+            font-size: 1.1rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .property-price {
+            color: #059669;
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .property-location {
+            color: #6b7280;
+            margin-bottom: 15px;
+        }
+        .loading {
+            text-align: center;
+            padding: 40px;
+            font-size: 1.2rem;
+        }
+        .error {
+            background: #fee2e2;
+            color: #dc2626;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            margin: 30px 0;
+        }
+        .pagination button {
+            padding: 8px 16px;
+            border: 1px solid #d1d5db;
+            background: white;
+            color: #374151;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        .pagination button:hover {
+            background: #f3f4f6;
+        }
+        .pagination button.active {
+            background: #3b82f6;
+            color: white;
+            border-color: #3b82f6;
+        }
+        .pagination button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏠 Sistema Inmobiliario</h1>
+            <p>Propiedades en Morelos - Funcionando con Render</p>
+        </div>
+        
+        <div id="loading" class="loading">
+            ⏳ Cargando propiedades...
+        </div>
+        
+        <div id="error" class="error" style="display: none;"></div>
+        
+        <div id="properties-container" class="properties-grid"></div>
+        
+        <div id="pagination" class="pagination" style="display: none;"></div>
+        
+        <div id="debug-info" style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px; font-family: monospace; font-size: 0.9rem; display: none;"></div>
+    </div>
+
+    <script>
+        // CONFIGURACIÓN - Detectar automáticamente el dominio
+        const API_BASE = window.location.origin;
+        
+        console.log('🚀 API Base detectada:', API_BASE);
+        
+        let currentPage = 1;
+        let totalPages = 1;
+        let allProperties = [];
+        
+        // FUNCIÓN COPIADA DEL SISTEMA QUE SÍ FUNCIONABA
+        function createPropertyCard(property) {
+            const div = document.createElement('div');
+            div.className = 'property-card';
+            
+            // Extraer datos de forma segura - COPIADO EXACTO
+            const tituloOriginal = property.titulo || 'Sin título';
+            const tipoPropiedad = property.tipo_propiedad || 'Propiedad';
+            const ciudad = property.ciudad || 'Ubicación no especificada';
+            const titulo = `${tipoPropiedad} en ${ciudad}`;
+            const precio = formatPrice(property.precio);
+            const ubicacion = getLocation(property);
+            
+            // IMAGEN: Usar proxy para TODOS los nombres de archivo
+            const imagen = property.imagen_url ? `${API_BASE}/proxy-imagen/${property.imagen_url}` : `${API_BASE}/proxy-imagen/placeholder.jpg`;
+            
+            const tipoOperacion = property.tipo_operacion || 'Sin especificar';
+            
+            console.log(`📷 Imagen generada: ${imagen} (desde: ${property.imagen_url})`);
+            
+            div.innerHTML = `
+                <img src="${imagen}" alt="${titulo}" class="property-image" 
+                     onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDMyMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIzMjAiIGhlaWdodD0iMjAwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0xNDQgODBIMTc2VjExMkgxNDRWODBaIiBmaWxsPSIjRDFENURCIi8+CjxwYXRoIGQ9Ik0xMjAgMTA0SDE0NFYxMjhIMTIwVjEwNFoiIGZpbGw9IiNEMUQ1REIiLz4KPHA+UmVjdCB3aWR0aD0iMzIwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iI0YzRjRGNiIvPgo8L3N2Zz4='"
+                />
+                
+                <div class="property-content">
+                    <h3 class="property-title">${titulo}</h3>
+                    <div class="property-price">${precio}</div>
+                    <div class="property-location">📍 ${ubicacion}</div>
+                    <div style="font-size: 0.8rem; color: #6b7280; margin-top: 10px;">
+                        🔖 ${tipoOperacion} • 🆔 ${property.id}
+                    </div>
+                </div>
+            `;
+            
+            return div;
+        }
+
+        // FUNCIONES COPIADAS DEL SISTEMA QUE SÍ FUNCIONABA
+        function formatPrice(precio) {
+            if (!precio || precio === 0) return 'Precio a consultar';
+            
+            if (typeof precio === 'string') {
+                precio = parseFloat(precio.replace(/[^0-9.-]+/g, ''));
+            }
+            
+            // NO REDONDEAR - mostrar precio completo
+            return `$${precio.toLocaleString('es-MX')}`;
+        }
+
+        function getLocation(property) {
+            const ubicaciones = [
+                property.ciudad,
+                property.estado,
+                property.colonia,
+                property.direccion
+            ].filter(Boolean);
+            
+            // Capitalizar primera letra de cada parte
+            const ubicacionesCapitalizadas = ubicaciones.map(ubicacion => {
+                if (!ubicacion) return '';
+                return ubicacion.charAt(0).toUpperCase() + ubicacion.slice(1).toLowerCase();
+            });
+            
+            return ubicacionesCapitalizadas.join(', ') || 'Ubicación no especificada';
+        }
+
+        async function loadProperties(page = 1) {
+            try {
+                document.getElementById('loading').style.display = 'block';
+                document.getElementById('error').style.display = 'none';
+                
+                const url = `${API_BASE}/propiedades?pagina=${page}&por_pagina=60`;
+                console.log('📡 Cargando desde:', url);
+                
+                const response = await fetch(url);
+                if (!response.ok) {
+                    throw new Error(`Error ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                console.log('📊 Datos recibidos:', data);
+                
+                if (!data.propiedades || data.propiedades.length === 0) {
+                    throw new Error('No se encontraron propiedades');
+                }
+                
+                allProperties = data.propiedades;
+                totalPages = data.total_paginas;
+                currentPage = page;
+                
+                displayProperties(allProperties);
+                setupPagination();
+                
+                document.getElementById('loading').style.display = 'none';
+                
+                // Debug info
+                const debugInfo = document.getElementById('debug-info');
+                debugInfo.innerHTML = `
+                    <strong>🔍 Debug Info:</strong><br>
+                    📡 API: ${API_BASE}<br>
+                    📊 Propiedades: ${data.propiedades.length}<br>
+                    📄 Página: ${currentPage}/${totalPages}<br>
+                    ⏱️ Tiempo consulta: ${data.tiempo_consulta_ms}ms<br>
+                    📷 Primera imagen: ${data.propiedades[0]?.imagen_url || 'Sin imagen'}
+                `;
+                debugInfo.style.display = 'block';
+                
+            } catch (error) {
+                console.error('❌ Error cargando propiedades:', error);
+                document.getElementById('loading').style.display = 'none';
+                const errorDiv = document.getElementById('error');
+                errorDiv.textContent = `Error: ${error.message}`;
+                errorDiv.style.display = 'block';
+            }
+        }
+
+        function displayProperties(properties) {
+            const container = document.getElementById('properties-container');
+            container.innerHTML = '';
+            
+            properties.forEach(property => {
+                const card = createPropertyCard(property);
+                container.appendChild(card);
+            });
+        }
+
+        function setupPagination() {
+            const paginationDiv = document.getElementById('pagination');
+            paginationDiv.innerHTML = '';
+            
+            if (totalPages <= 1) {
+                paginationDiv.style.display = 'none';
+                return;
+            }
+            
+            paginationDiv.style.display = 'flex';
+            
+            // Botón anterior
+            const prevBtn = document.createElement('button');
+            prevBtn.textContent = '← Anterior';
+            prevBtn.disabled = currentPage === 1;
+            prevBtn.onclick = () => loadProperties(currentPage - 1);
+            paginationDiv.appendChild(prevBtn);
+            
+            // Números de página
+            for (let i = 1; i <= Math.min(totalPages, 10); i++) {
+                const pageBtn = document.createElement('button');
+                pageBtn.textContent = i;
+                pageBtn.className = i === currentPage ? 'active' : '';
+                pageBtn.onclick = () => loadProperties(i);
+                paginationDiv.appendChild(pageBtn);
+            }
+            
+            // Botón siguiente
+            const nextBtn = document.createElement('button');
+            nextBtn.textContent = 'Siguiente →';
+            nextBtn.disabled = currentPage === totalPages;
+            nextBtn.onclick = () => loadProperties(currentPage + 1);
+            paginationDiv.appendChild(nextBtn);
+        }
+
+        // INICIALIZAR AL CARGAR LA PÁGINA
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('🚀 Inicializando sistema inmobiliario...');
+            loadProperties(1);
+        });
+    </script>
+</body>
+</html> 
