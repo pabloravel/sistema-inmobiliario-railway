@@ -684,21 +684,33 @@ async def servir_frontend():
 
         // Función para convertir URL S3 a proxy
         function getImageUrl(imageUrl) {
-            if (!imageUrl) return API_BASE + '/proxy-imagen/placeholder.jpg';
+            console.log('🔍 Procesando imagen:', imageUrl);
+            
+            if (!imageUrl) {
+                console.log('❌ No hay imagen, usando placeholder');
+                return API_BASE + '/proxy-imagen/placeholder.jpg';
+            }
             
             // Si ya es una URL completa de S3, extraer solo el nombre del archivo
             if (imageUrl.includes('s3.amazonaws.com')) {
-                const matches = imageUrl.match(/\\/([^\\/]+\\.jpg)$/);
+                console.log('🌐 URL S3 completa detectada');
+                const matches = imageUrl.match(/\/([^\/]+\.jpg)$/);
                 if (matches) {
-                    return API_BASE + '/proxy-imagen/' + matches[1];
+                    const fileName = matches[1];
+                    console.log('✅ Archivo extraído:', fileName);
+                    return API_BASE + '/proxy-imagen/' + fileName;
+                } else {
+                    console.log('❌ No se pudo extraer nombre del archivo');
                 }
             }
             
             // Si es solo un nombre de archivo
             if (imageUrl.endsWith('.jpg') || imageUrl.endsWith('.jpeg') || imageUrl.endsWith('.png')) {
+                console.log('📄 Nombre de archivo directo:', imageUrl);
                 return API_BASE + '/proxy-imagen/' + imageUrl;
             }
             
+            console.log('⚠️  Formato no reconocido, usando placeholder');
             return API_BASE + '/proxy-imagen/placeholder.jpg';
         }
 
