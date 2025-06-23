@@ -53,7 +53,7 @@ def get_db_connection():
         raise HTTPException(status_code=500, detail="Error de conexión a base de datos")
 
 @app.get("/", response_class=HTMLResponse)
-async def frontend_principal():
+def frontend_principal():
     """Frontend principal con placeholders profesionales"""
     html_content = """<!DOCTYPE html>
 <html lang="es">
