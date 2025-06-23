@@ -13,7 +13,7 @@ Esta API incluye:
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import Response
+from fastapi.responses import Response, HTMLResponse
 from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
 import psycopg2
@@ -503,6 +503,318 @@ async def proxy_imagen_s3(imagen_nombre: str):
             content=placeholder_svg,
             media_type="image/svg+xml"
         )
+
+# =====================================================
+# FRONTEND HTML INTEGRADO
+# =====================================================
+
+@app.get("/frontend", response_class=HTMLResponse)
+async def servir_frontend():
+    """Servir frontend HTML con imágenes funcionando INMEDIATAMENTE"""
+    
+    html_content = """<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🏠 Sistema Inmobiliario FUNCIONA YA</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #333;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 2.5em;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+        .stat {
+            text-align: center;
+        }
+        .stat-number {
+            font-size: 2em;
+            font-weight: bold;
+            color: #667eea;
+        }
+        .properties-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .property-card {
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            overflow: hidden;
+            background: white;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+        .property-card:hover {
+            transform: translateY(-5px);
+        }
+        .property-image {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            background: #f0f0f0;
+        }
+        .property-info {
+            padding: 15px;
+        }
+        .property-price {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+        .property-title {
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: #34495e;
+        }
+        .property-location {
+            color: #7f8c8d;
+            font-size: 0.9em;
+            margin-bottom: 8px;
+        }
+        .property-id {
+            font-size: 0.8em;
+            color: #95a5a6;
+            background: #ecf0f1;
+            padding: 2px 6px;
+            border-radius: 3px;
+            display: inline-block;
+        }
+        .loading {
+            text-align: center;
+            padding: 50px;
+            color: #667eea;
+            font-size: 1.2em;
+        }
+        .error {
+            color: #e74c3c;
+            text-align: center;
+            padding: 20px;
+            background: #fadbd8;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        .success {
+            color: #27ae60;
+            text-align: center;
+            padding: 20px;
+            background: #d5f4e6;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        .render-info {
+            background: #667eea;
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="render-info">
+            🚀 <strong>FUNCIONANDO EN RENDER</strong> - Sistema Inmobiliario Online<br>
+            ✅ API Activa | 🖼️ Proxy de Imágenes | 🌐 En Línea 24/7
+        </div>
+
+        <div class="header">
+            <h1>🏠 Sistema Inmobiliario</h1>
+            <p>✅ FUNCIONANDO EN RENDER - IMÁGENES CORREGIDAS</p>
+        </div>
+
+        <div class="stats">
+            <div class="stat">
+                <div class="stat-number" id="totalProperties">0</div>
+                <div>Total Propiedades</div>
+            </div>
+            <div class="stat">
+                <div class="stat-number" id="loadedImages">0</div>
+                <div>Imágenes Cargadas</div>
+            </div>
+            <div class="stat">
+                <div class="stat-number" id="apiStatus">❌</div>
+                <div>Estado API</div>
+            </div>
+        </div>
+
+        <div id="status" class="loading">🔄 Cargando propiedades desde Render...</div>
+        
+        <div id="propertiesContainer" class="properties-grid"></div>
+    </div>
+
+    <script>
+        // Detectar si estamos en Render o localhost
+        const API_BASE = window.location.origin;
+        let totalProperties = 0;
+        let loadedImages = 0;
+
+        console.log('🌐 API Base detectado:', API_BASE);
+
+        // Función para convertir URL S3 a proxy
+        function getImageUrl(imageUrl) {
+            if (!imageUrl) return API_BASE + '/proxy-imagen/placeholder.jpg';
+            
+            // Si ya es una URL completa de S3, extraer solo el nombre del archivo
+            if (imageUrl.includes('s3.amazonaws.com')) {
+                const matches = imageUrl.match(/\\/([^\\/]+\\.jpg)$/);
+                if (matches) {
+                    return API_BASE + '/proxy-imagen/' + matches[1];
+                }
+            }
+            
+            // Si es solo un nombre de archivo
+            if (imageUrl.endsWith('.jpg') || imageUrl.endsWith('.jpeg') || imageUrl.endsWith('.png')) {
+                return API_BASE + '/proxy-imagen/' + imageUrl;
+            }
+            
+            return API_BASE + '/proxy-imagen/placeholder.jpg';
+        }
+
+        // Función para crear tarjeta de propiedad
+        function createPropertyCard(property) {
+            const imageUrl = getImageUrl(property.imagen_url || property.imagen);
+            
+            return `
+                <div class="property-card">
+                    <img class="property-image" 
+                         src="${imageUrl}" 
+                         alt="Propiedad ${property.id}"
+                         onerror="this.src='${API_BASE}/proxy-imagen/placeholder.jpg'; this.onerror=null;"
+                         onload="imageLoaded()">
+                    <div class="property-info">
+                        <div class="property-price">$${(property.precio || 0).toLocaleString()}</div>
+                        <div class="property-title">${property.titulo || 'Sin título'}</div>
+                        <div class="property-location">📍 ${property.ciudad || ''} ${property.estado || ''}</div>
+                        <div class="property-id">ID: ${property.id}</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Función para actualizar contador de imágenes
+        function imageLoaded() {
+            loadedImages++;
+            document.getElementById('loadedImages').textContent = loadedImages;
+        }
+
+        // Función principal para cargar propiedades
+        async function loadProperties() {
+            try {
+                console.log('🔄 Conectando a:', API_BASE + '/propiedades');
+                
+                const response = await fetch(API_BASE + '/propiedades?limite=20&precio_min=1');
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                console.log('✅ Datos recibidos:', data);
+                
+                totalProperties = data.propiedades?.length || 0;
+                
+                if (totalProperties === 0) {
+                    throw new Error('No se encontraron propiedades');
+                }
+                
+                // Actualizar estadísticas
+                document.getElementById('totalProperties').textContent = totalProperties;
+                document.getElementById('apiStatus').textContent = '✅';
+                
+                // Crear HTML de propiedades
+                const propertiesHTML = data.propiedades.map(createPropertyCard).join('');
+                document.getElementById('propertiesContainer').innerHTML = propertiesHTML;
+                
+                // Mostrar éxito
+                document.getElementById('status').innerHTML = `
+                    <div class="success">
+                        ✅ <strong>SISTEMA FUNCIONANDO PERFECTAMENTE EN RENDER</strong><br>
+                        📊 ${totalProperties} propiedades cargadas<br>
+                        🖼️ Imágenes usando proxy interno: /proxy-imagen/<br>
+                        🌐 API: ${API_BASE}<br>
+                        ⚡ Tiempo respuesta: ${data.tiempo_consulta_ms || 0}ms
+                    </div>
+                `;
+                
+                console.log('🎉 Sistema cargado exitosamente');
+                
+            } catch (error) {
+                console.error('❌ Error:', error);
+                document.getElementById('status').innerHTML = `
+                    <div class="error">
+                        ❌ <strong>Error de conexión:</strong><br>
+                        ${error.message}<br><br>
+                        🔧 <strong>Diagnóstico:</strong><br>
+                        • API: ${API_BASE}<br>
+                        • Endpoint: /propiedades<br>
+                        • Proxy imágenes: /proxy-imagen/<br><br>
+                        🔄 Reintentando en 10 segundos...
+                    </div>
+                `;
+                
+                // Reintentar automáticamente
+                setTimeout(loadProperties, 10000);
+            }
+        }
+
+        // Verificar estado del proxy
+        async function testProxy() {
+            try {
+                const response = await fetch(API_BASE + '/proxy-imagen/cuernavaca-2025-05-30-3908221572840457.jpg');
+                console.log('🖼️ Proxy test response:', response.status);
+            } catch (error) {
+                console.error('❌ Proxy test failed:', error);
+            }
+        }
+
+        // Inicializar sistema
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🚀 Iniciando sistema inmobiliario...');
+            console.log('🌐 API Base:', API_BASE);
+            console.log('🏠 Entorno:', API_BASE.includes('render.com') ? 'RENDER' : 'LOCAL');
+            
+            loadProperties();
+            testProxy();
+        });
+    </script>
+</body>
+</html>"""
+    
+    return html_content
 
 # =====================================================
 # INICIAR APLICACIÓN
