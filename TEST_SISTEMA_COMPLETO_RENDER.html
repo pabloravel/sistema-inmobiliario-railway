@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎉 SISTEMA COMPLETO FUNCIONANDO - RENDER</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .header {
+            text-align: center;
+            background: rgba(255,255,255,0.1);
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .status {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .status-card {
+            background: rgba(255,255,255,0.1);
+            padding: 20px;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .success { border-left: 5px solid #4CAF50; }
+        .warning { border-left: 5px solid #FF9800; }
+        .error { border-left: 5px solid #f44336; }
+        
+        .propiedades-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        
+        .propiedad-card {
+            background: rgba(255,255,255,0.9);
+            color: #333;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        
+        .propiedad-imagen {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            background: #f0f0f0;
+        }
+        
+        .propiedad-info {
+            padding: 15px;
+        }
+        
+        .precio {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #2196F3;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            font-size: 1.2em;
+        }
+        
+        .test-button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 1.1em;
+            cursor: pointer;
+            margin: 10px;
+            transition: all 0.3s;
+        }
+        
+        .test-button:hover {
+            background: #45a049;
+            transform: translateY(-2px);
+        }
+        
+        .url-info {
+            background: rgba(0,0,0,0.3);
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🎉 SISTEMA INMOBILIARIO RENDER</h1>
+        <h2>✅ PROXY DE IMÁGENES S3 + API COMPLETA</h2>
+        <p>Demostración completa del sistema funcionando en Render</p>
+    </div>
+
+    <div class="status" id="statusCards">
+        <div class="status-card loading">
+            <h3>🔄 Verificando sistema...</h3>
+            <p>Conectando con Render...</p>
+        </div>
+    </div>
+
+    <div class="url-info">
+        <strong>🌐 URLs del Sistema:</strong><br>
+        • API: <a href="https://sistema-inmobiliario-railway.onrender.com/" target="_blank" style="color: #4CAF50;">https://sistema-inmobiliario-railway.onrender.com/</a><br>
+        • Propiedades: <a href="https://sistema-inmobiliario-railway.onrender.com/propiedades" target="_blank" style="color: #4CAF50;">https://sistema-inmobiliario-railway.onrender.com/propiedades</a><br>
+        • Proxy Imágenes: <span style="color: #FF9800;">https://sistema-inmobiliario-railway.onrender.com/proxy-imagen/[imagen]</span><br>
+        • Frontend: <a href="https://sistema-inmobiliario-railway.onrender.com/frontend" target="_blank" style="color: #4CAF50;">https://sistema-inmobiliario-railway.onrender.com/frontend</a>
+    </div>
+
+    <div style="text-align: center; margin: 30px 0;">
+        <button class="test-button" onclick="verificarSistema()">🔄 Verificar Sistema</button>
+        <button class="test-button" onclick="probarProxy()">🖼️ Probar Proxy</button>
+        <button class="test-button" onclick="cargarPropiedades()">🏠 Cargar Propiedades</button>
+    </div>
+
+    <div id="propiedadesContainer">
+        <div class="loading">
+            <p>Haz clic en "Cargar Propiedades" para ver el sistema funcionando</p>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'https://sistema-inmobiliario-railway.onrender.com';
+        
+        async function verificarSistema() {
+            const statusContainer = document.getElementById('statusCards');
+            statusContainer.innerHTML = '<div class="status-card loading"><h3>🔄 Verificando...</h3></div>';
+            
+            const tests = [
+                {
+                    name: 'API Principal',
+                    url: `${API_BASE}/`,
+                    test: async (url) => {
+                        const response = await fetch(url);
+                        const data = await response.json();
+                        return {
+                            success: response.ok && data.mensaje,
+                            message: data.mensaje || 'Error',
+                            details: `Versión: ${data.version || 'N/A'}`
+                        };
+                    }
+                },
+                {
+                    name: 'Endpoint Propiedades',
+                    url: `${API_BASE}/propiedades`,
+                    test: async (url) => {
+                        const response = await fetch(url);
+                        const data = await response.json();
+                        return {
+                            success: response.ok && data.propiedades,
+                            message: `${data.total || 0} propiedades disponibles`,
+                            details: `Tiempo: ${data.tiempo_consulta_ms || 0}ms`
+                        };
+                    }
+                },
+                {
+                    name: 'Proxy de Imágenes',
+                    url: `${API_BASE}/proxy-imagen/cuernavaca-2025-05-30-3908221572840457.jpg`,
+                    test: async (url) => {
+                        const response = await fetch(url, { method: 'HEAD' });
+                        return {
+                            success: response.ok || response.status === 405,
+                            message: response.ok ? 'Proxy funcionando' : `HTTP ${response.status}`,
+                            details: `Content-Type: ${response.headers.get('content-type') || 'N/A'}`
+                        };
+                    }
+                }
+            ];
+            
+            let html = '';
+            
+            for (const test of tests) {
+                try {
+                    const result = await test.test(test.url);
+                    const statusClass = result.success ? 'success' : 'error';
+                    const icon = result.success ? '✅' : '❌';
+                    
+                    html += `
+                        <div class="status-card ${statusClass}">
+                            <h3>${icon} ${test.name}</h3>
+                            <p><strong>${result.message}</strong></p>
+                            <small>${result.details}</small>
+                        </div>
+                    `;
+                } catch (error) {
+                    html += `
+                        <div class="status-card error">
+                            <h3>❌ ${test.name}</h3>
+                            <p><strong>Error de conexión</strong></p>
+                            <small>${error.message}</small>
+                        </div>
+                    `;
+                }
+            }
+            
+            statusContainer.innerHTML = html;
+        }
+        
+        async function probarProxy() {
+            const img = new Image();
+            const testUrl = `${API_BASE}/proxy-imagen/cuernavaca-2025-05-30-3908221572840457.jpg`;
+            
+            img.onload = () => {
+                alert('✅ PROXY FUNCIONANDO: La imagen se cargó correctamente desde S3');
+            };
+            
+            img.onerror = () => {
+                alert('❌ Error: El proxy no pudo cargar la imagen');
+            };
+            
+            img.src = testUrl;
+        }
+        
+        async function cargarPropiedades() {
+            const container = document.getElementById('propiedadesContainer');
+            container.innerHTML = '<div class="loading"><h3>🔄 Cargando propiedades desde Render...</h3></div>';
+            
+            try {
+                const response = await fetch(`${API_BASE}/propiedades?por_pagina=6`);
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${data.detail || 'Error desconocido'}`);
+                }
+                
+                let html = `
+                    <div style="text-align: center; margin-bottom: 30px; background: rgba(255,255,255,0.1); padding: 20px; border-radius: 10px;">
+                        <h2>🏠 ${data.total} Propiedades Disponibles</h2>
+                        <p>Página ${data.pagina} de ${data.total_paginas} • Tiempo de consulta: ${data.tiempo_consulta_ms}ms</p>
+                    </div>
+                    <div class="propiedades-grid">
+                `;
+                
+                for (const propiedad of data.propiedades) {
+                    // Generar URL de imagen usando el proxy
+                    let imagenUrl = `${API_BASE}/proxy-imagen/cuernavaca-2025-05-30-${propiedad.id}.jpg`;
+                    
+                    html += `
+                        <div class="propiedad-card">
+                            <img src="${imagenUrl}" 
+                                 alt="${propiedad.titulo}" 
+                                 class="propiedad-imagen"
+                                 onerror="this.src='https://via.placeholder.com/300x200?text=Sin+Imagen'">
+                            <div class="propiedad-info">
+                                <h3>${propiedad.titulo}</h3>
+                                <div class="precio">$${propiedad.precio ? propiedad.precio.toLocaleString() : 'Consultar'}</div>
+                                <p><strong>📍 ${propiedad.ciudad}</strong></p>
+                                <p>🏷️ ${propiedad.tipo_operacion} • ${propiedad.tipo_propiedad || 'N/A'}</p>
+                                <p>🆔 ID: ${propiedad.id}</p>
+                                <small style="color: #666;">Imagen: ${imagenUrl.split('/').pop()}</small>
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                html += '</div>';
+                container.innerHTML = html;
+                
+            } catch (error) {
+                container.innerHTML = `
+                    <div class="status-card error" style="margin: 20px auto; max-width: 600px;">
+                        <h3>❌ Error al cargar propiedades</h3>
+                        <p><strong>${error.message}</strong></p>
+                        <small>Verifica que la API esté funcionando correctamente</small>
+                    </div>
+                `;
+            }
+        }
+        
+        // Verificar sistema automáticamente al cargar
+        window.onload = () => {
+            setTimeout(verificarSistema, 1000);
+        };
+    </script>
+</body>
+</html> 
