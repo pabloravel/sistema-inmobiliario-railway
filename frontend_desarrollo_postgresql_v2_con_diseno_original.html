@@ -943,13 +943,17 @@
             const precio = formatPrice(property.precio);
             const ubicacion = getLocation(property);
             // CORRECCIÓN CRÍTICA: Usar proxy para URLs de S3
-            let imagen = `${IMAGEN_BASE}/src/Imagen_no_disponible.jpg`;
+            let imagen = `${API_BASE}/proxy-imagen/placeholder.jpg`;
             if (property.imagen_url && property.imagen_url.includes('s3.amazonaws.com')) {
                 // Extraer nombre de archivo de URL S3 y usar proxy
                 const nombreArchivo = property.imagen_url.split('/').pop();
                 imagen = `${API_BASE}/proxy-imagen/${nombreArchivo}`;
             } else if (property.imagen_url && property.imagen_url.startsWith('http')) {
-                imagen = property.imagen_url;
+                // Para otras URLs HTTP, también usar proxy
+                imagen = `${API_BASE}/proxy-imagen/placeholder.jpg`;
+            } else if (property.imagen_url && property.imagen_url.includes('-2025-')) {
+                // Para nombres locales, usar proxy directamente
+                imagen = `${API_BASE}/proxy-imagen/${property.imagen_url}`;
             }
             const tipoOperacion = property.tipo_operacion || 'Sin especificar';
             
@@ -958,7 +962,7 @@
             div.innerHTML = `
                 <div class="property-operation operation-${tipoOperacion.toLowerCase()}">${tipoOperacion}</div>
                 <img src="${imagen}" alt="${titulo}" class="property-image" 
-                     onerror="this.onerror=null; this.src='${IMAGEN_BASE}/src/Imagen_no_disponible.jpg';"
+                     onerror="this.onerror=null; this.src='${API_BASE}/proxy-imagen/placeholder.jpg';"
                      onclick="window.open('${property.link}', '_blank')" style="cursor: pointer;"
                 />
                 
