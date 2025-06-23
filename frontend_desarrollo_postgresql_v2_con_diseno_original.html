@@ -786,7 +786,7 @@
 
     <script>
         // Configuración HÍBRIDA: API en la nube, imágenes locales
-        const API_BASE = 'http://localhost:8000';
+        const API_BASE = '';  // Usar misma URL de Render
         const IMAGEN_BASE = 'http://localhost:5008'; // Para servir imágenes locales
         let allProperties = [];
         let filteredProperties = [];
@@ -942,19 +942,11 @@
             const titulo = `${tipoPropiedad} en ${ciudad}`;
             const precio = formatPrice(property.precio);
             const ubicacion = getLocation(property);
-            // CORRECCIÓN CRÍTICA: Usar proxy para URLs de S3
+            // CORRECCIÓN CRÍTICA: Usar proxy para TODAS las imágenes
             let imagen = `${API_BASE}/proxy-imagen/placeholder.jpg`;
-            if (property.imagen_url && property.imagen_url.includes('s3.amazonaws.com')) {
-                // CORRECTO: El proxy extrae la fecha automáticamente del nombre
-                // URL: https://propiedades-morelos-imagenes.s3.amazonaws.com/2025-05-30/cuernavaca-2025-05-30-3908221572840457.jpg
-                // Solo necesitamos: cuernavaca-2025-05-30-3908221572840457.jpg
-                const nombreArchivo = property.imagen_url.split('/').pop();
-                imagen = `${API_BASE}/proxy-imagen/${nombreArchivo}`;
-            } else if (property.imagen_url && property.imagen_url.startsWith('http')) {
-                // Para otras URLs HTTP, también usar proxy
-                imagen = `${API_BASE}/proxy-imagen/placeholder.jpg`;
-            } else if (property.imagen_url && property.imagen_url.includes('-2025-')) {
-                // Para nombres locales, usar proxy directamente
+            if (property.imagen_url && property.imagen_url !== 'placeholder.jpg') {
+                // La API ahora devuelve SOLO el nombre del archivo
+                // Usar proxy directamente con el nombre que viene de la API
                 imagen = `${API_BASE}/proxy-imagen/${property.imagen_url}`;
             }
             const tipoOperacion = property.tipo_operacion || 'Sin especificar';

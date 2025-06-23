@@ -296,11 +296,16 @@ async def listar_propiedades(
     for prop in propiedades_data:
         prop_dict = dict(prop)
         
-        # Generar URL de imagen
+        # Generar URL de imagen - USAR SOLO NOMBRE PARA QUE FRONTEND USE PROXY
         if prop_dict.get('imagen'):
-            prop_dict['imagen_url'] = generar_url_imagen(prop_dict['imagen'])
+            imagen = prop_dict['imagen']
+            # Si es URL completa S3, extraer solo el nombre del archivo
+            if 's3.amazonaws.com' in imagen:
+                prop_dict['imagen_url'] = imagen.split('/')[-1]  # Solo nombre archivo
+            else:
+                prop_dict['imagen_url'] = imagen
         else:
-            prop_dict['imagen_url'] = generar_url_imagen('')
+            prop_dict['imagen_url'] = 'placeholder.jpg'
         
         # Convertir Decimal a float
         if prop_dict.get('precio'):
