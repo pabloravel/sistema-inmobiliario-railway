@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🏠 Sistema Inmobiliario - SOLUCIÓN FINAL IMÁGENES</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .properties-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        .property-card {
+            border: 1px solid #e5e7eb;
+            border-radius: 10px;
+            overflow: hidden;
+            background: white;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: transform 0.2s;
+        }
+        .property-card:hover {
+            transform: translateY(-2px);
+        }
+        .property-image {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+        }
+        .property-content {
+            padding: 15px;
+        }
+        .property-title {
+            font-size: 1.1rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .property-price {
+            color: #059669;
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .property-location {
+            color: #6b7280;
+            margin-bottom: 15px;
+        }
+        .loading {
+            text-align: center;
+            padding: 40px;
+            font-size: 1.2rem;
+        }
+        .error {
+            background: #fee2e2;
+            color: #dc2626;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .debug-section {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 0.9rem;
+        }
+        .image-test {
+            border: 2px solid #e5e7eb;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 8px;
+        }
+        .image-test img {
+            max-width: 100px;
+            height: 60px;
+            object-fit: cover;
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏠 Sistema Inmobiliario</h1>
+            <p>🔧 SOLUCIÓN FINAL - Conversión automática S3 → Proxy</p>
+        </div>
+        
+        <div id="loading" class="loading">
+            ⏳ Cargando propiedades...
+        </div>
+        
+        <div id="error" class="error" style="display: none;"></div>
+        
+        <div id="properties-container" class="properties-grid"></div>
+        
+        <div id="debug-info" class="debug-section" style="display: none;"></div>
+        
+        <div id="image-tests" class="debug-section">
+            <h3>🧪 Pruebas de Imágenes en Tiempo Real</h3>
+            <div id="test-results"></div>
+        </div>
+    </div>
+
+    <script>
+        // CONFIGURACIÓN
+        const API_BASE = window.location.origin;
+        
+        console.log('🚀 API Base:', API_BASE);
+        
+        let allProperties = [];
+        
+        // FUNCIÓN PARA CONVERTIR URL S3 A NOMBRE DE ARCHIVO
+        function convertirS3AProxy(imagenUrl) {
+            if (!imagenUrl) {
+                return `${API_BASE}/proxy-imagen/placeholder.jpg`;
+            }
+            
+            console.log('🔄 Procesando imagen:', imagenUrl);
+            
+            // Si ya es una URL de proxy, devolverla
+            if (imagenUrl.includes('/proxy-imagen/')) {
+                return imagenUrl;
+            }
+            
+            // Si es URL S3 completa, extraer solo el nombre del archivo
+            if (imagenUrl.includes('s3.amazonaws.com')) {
+                const partes = imagenUrl.split('/');
+                const nombreArchivo = partes[partes.length - 1]; // Último elemento
+                const urlProxy = `${API_BASE}/proxy-imagen/${nombreArchivo}`;
+                console.log(`✅ S3 → Proxy: ${imagenUrl} → ${urlProxy}`);
+                return urlProxy;
+            }
+            
+            // Si es solo un nombre de archivo
+            if (imagenUrl.endsWith('.jpg') || imagenUrl.endsWith('.jpeg') || imagenUrl.endsWith('.png')) {
+                return `${API_BASE}/proxy-imagen/${imagenUrl}`;
+            }
+            
+            // Fallback
+            return `${API_BASE}/proxy-imagen/placeholder.jpg`;
+        }
+
+        function createPropertyCard(property) {
+            const div = document.createElement('div');
+            div.className = 'property-card';
+            
+            const titulo = `${property.tipo_propiedad || 'Propiedad'} en ${property.ciudad || 'Ubicación no especificada'}`;
+            const precio = formatPrice(property.precio);
+            const ubicacion = getLocation(property);
+            
+            // CONVERSIÓN CRÍTICA: S3 URL → Proxy URL
+            const imagenOriginal = property.imagen_url;
+            const imagenProxy = convertirS3AProxy(imagenOriginal);
+            
+            div.innerHTML = `
+                <img src="${imagenProxy}" alt="${titulo}" class="property-image" 
+                     onerror="console.error('❌ Error cargando imagen:', this.src); this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDMyMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIzMjAiIGhlaWdodD0iMjAwIiBmaWxsPSIjRkY2B0I0Ii8+CjxwYXRoIGQ9Ik0xNDQgODBIMTc2VjExMkgxNDRWODBaIiBmaWxsPSIjRDFENURCIi8+CjxwYXRoIGQ9Ik0xMjAgMTA0SDE0NFYxMjhIMTIwVjEwNFoiIGZpbGw9IiNEMUQ1REIiLz4KPHRleHQgeD0iMTYwIiB5PSIxMTAiIGZpbGw9IndoaXRlIiBmb250LXNpemU9IjE0IiBmb250LWZhbWlseT0iQXJpYWwiPkVSUk9SPC90ZXh0Pgo8L3N2Zz4='"
+                     onload="console.log('✅ Imagen cargada exitosamente:', this.src)"
+                />
+                
+                <div class="property-content">
+                    <h3 class="property-title">${titulo}</h3>
+                    <div class="property-price">${precio}</div>
+                    <div class="property-location">📍 ${ubicacion}</div>
+                    <div style="font-size: 0.8rem; color: #6b7280; margin-top: 10px;">
+                        🔖 ${property.tipo_operacion || 'Sin especificar'} • 🆔 ${property.id}
+                    </div>
+                    <div style="font-size: 0.7rem; color: #9ca3af; margin-top: 5px; word-break: break-all;">
+                        📷 Original: ${imagenOriginal}<br>
+                        🔄 Proxy: ${imagenProxy}
+                    </div>
+                </div>
+            `;
+            
+            return div;
+        }
+
+        function formatPrice(precio) {
+            if (!precio || precio === 0) return 'Precio a consultar';
+            
+            if (typeof precio === 'string') {
+                precio = parseFloat(precio.replace(/[^0-9.-]+/g, ''));
+            }
+            
+            return `$${precio.toLocaleString('es-MX')}`;
+        }
+
+        function getLocation(property) {
+            const ubicaciones = [
+                property.ciudad,
+                property.estado,
+                property.colonia,
+                property.direccion
+            ].filter(Boolean);
+            
+            const ubicacionesCapitalizadas = ubicaciones.map(ubicacion => {
+                if (!ubicacion) return '';
+                return ubicacion.charAt(0).toUpperCase() + ubicacion.slice(1).toLowerCase();
+            });
+            
+            return ubicacionesCapitalizadas.join(', ') || 'Ubicación no especificada';
+        }
+
+        async function testearImagenes() {
+            const testResults = document.getElementById('test-results');
+            
+            // Probar diferentes tipos de URLs
+            const pruebasImagenes = [
+                {
+                    nombre: 'Proxy directo',
+                    url: `${API_BASE}/proxy-imagen/cuernavaca-2025-05-30-3908221572840457.jpg`
+                },
+                {
+                    nombre: 'Placeholder',
+                    url: `${API_BASE}/proxy-imagen/placeholder.jpg`
+                },
+                {
+                    nombre: 'URL S3 convertida',
+                    original: 'https://propiedades-morelos-imagenes.s3.amazonaws.com/2025-05-30/cuernavaca-2025-05-30-3908221572840457.jpg',
+                    url: convertirS3AProxy('https://propiedades-morelos-imagenes.s3.amazonaws.com/2025-05-30/cuernavaca-2025-05-30-3908221572840457.jpg')
+                }
+            ];
+            
+            testResults.innerHTML = '';
+            
+            pruebasImagenes.forEach((prueba, index) => {
+                const testDiv = document.createElement('div');
+                testDiv.className = 'image-test';
+                testDiv.innerHTML = `
+                    <strong>${prueba.nombre}:</strong><br>
+                    ${prueba.original ? `Original: ${prueba.original}<br>` : ''}
+                    Proxy: ${prueba.url}<br>
+                    <img src="${prueba.url}" 
+                         onload="this.nextElementSibling.textContent = '✅ FUNCIONA'"
+                         onerror="this.nextElementSibling.textContent = '❌ ERROR'"
+                    />
+                    <span style="color: #6b7280;">⏳ Cargando...</span>
+                `;
+                testResults.appendChild(testDiv);
+            });
+        }
+
+        async function loadProperties() {
+            try {
+                document.getElementById('loading').style.display = 'block';
+                document.getElementById('error').style.display = 'none';
+                
+                const url = `${API_BASE}/propiedades?pagina=1&por_pagina=6`;
+                console.log('📡 Cargando desde:', url);
+                
+                const response = await fetch(url);
+                if (!response.ok) {
+                    throw new Error(`Error ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                console.log('📊 Datos recibidos:', data);
+                
+                if (!data.propiedades || data.propiedades.length === 0) {
+                    throw new Error('No se encontraron propiedades');
+                }
+                
+                allProperties = data.propiedades;
+                
+                displayProperties(allProperties);
+                
+                document.getElementById('loading').style.display = 'none';
+                
+                // Debug info
+                const debugInfo = document.getElementById('debug-info');
+                debugInfo.innerHTML = `
+                    <strong>🔍 Debug Info Completo:</strong><br>
+                    📡 API Base: ${API_BASE}<br>
+                    📊 Propiedades cargadas: ${data.propiedades.length}<br>
+                    📷 Primera imagen original: ${data.propiedades[0]?.imagen_url}<br>
+                    🔄 Primera imagen convertida: ${convertirS3AProxy(data.propiedades[0]?.imagen_url)}<br>
+                    ⏱️ Tiempo consulta: ${data.tiempo_consulta_ms}ms<br>
+                    🧪 Proxy funciona: ${await verificarProxy()}
+                `;
+                debugInfo.style.display = 'block';
+                
+                // Testear imágenes
+                testearImagenes();
+                
+            } catch (error) {
+                console.error('❌ Error cargando propiedades:', error);
+                document.getElementById('loading').style.display = 'none';
+                const errorDiv = document.getElementById('error');
+                errorDiv.textContent = `Error: ${error.message}`;
+                errorDiv.style.display = 'block';
+            }
+        }
+
+        async function verificarProxy() {
+            try {
+                const response = await fetch(`${API_BASE}/proxy-imagen/cuernavaca-2025-05-30-3908221572840457.jpg`, {method: 'HEAD'});
+                return response.ok ? '✅ SÍ' : '❌ NO';
+            } catch {
+                return '❌ ERROR';
+            }
+        }
+
+        function displayProperties(properties) {
+            const container = document.getElementById('properties-container');
+            container.innerHTML = '';
+            
+            properties.forEach(property => {
+                const card = createPropertyCard(property);
+                container.appendChild(card);
+            });
+        }
+
+        // INICIALIZAR
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('🚀 Inicializando sistema con conversión S3 → Proxy...');
+            loadProperties();
+        });
+    </script>
+</body>
+</html> 

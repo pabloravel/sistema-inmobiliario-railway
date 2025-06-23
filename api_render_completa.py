@@ -506,6 +506,16 @@ async def proxy_imagen_s3(imagen_nombre: str):
 # FRONTEND HTML INTEGRADO
 # =====================================================
 
+@app.get("/solucion-final", response_class=HTMLResponse)
+async def servir_solucion_final():
+    """SOLUCIÓN FINAL: Frontend que convierte automáticamente URLs S3 a proxy"""
+    try:
+        with open("frontend_solucion_final.html", "r", encoding="utf-8") as f:
+            html_content = f.read()
+        return HTMLResponse(content=html_content)
+    except FileNotFoundError:
+        return HTMLResponse(content="<h1>Error: Solución final no encontrada</h1>")
+
 @app.get("/frontend-perfecto", response_class=HTMLResponse)
 async def servir_frontend_perfecto():
     """Frontend COPIADO del sistema que SÍ funcionaba"""
