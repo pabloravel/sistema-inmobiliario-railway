@@ -1,0 +1,12 @@
+🚨 FORCE DEPLOY MANUAL - 22 JUNIO 2025 20:39
+PABLO NECESITA QUE LAS IMÁGENES FUNCIONEN YA
+
+PROBLEMA: Render está usando caché viejo
+SOLUCIÓN: Este archivo fuerza un nuevo deploy
+
+CAMBIOS APLICADOS:
+- api_render_completa.py actualizado con placeholders profesionales
+- Eliminadas dependencias de S3
+- Sistema funciona SIN imágenes externas
+
+RENDER DEBE USAR ESTE DEPLOY INMEDIATAMENTE 
