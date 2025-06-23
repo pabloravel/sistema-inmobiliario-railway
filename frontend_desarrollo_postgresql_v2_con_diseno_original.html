@@ -945,7 +945,9 @@
             // CORRECCIÓN CRÍTICA: Usar proxy para URLs de S3
             let imagen = `${API_BASE}/proxy-imagen/placeholder.jpg`;
             if (property.imagen_url && property.imagen_url.includes('s3.amazonaws.com')) {
-                // Extraer nombre de archivo de URL S3 y usar proxy
+                // CORRECTO: El proxy extrae la fecha automáticamente del nombre
+                // URL: https://propiedades-morelos-imagenes.s3.amazonaws.com/2025-05-30/cuernavaca-2025-05-30-3908221572840457.jpg
+                // Solo necesitamos: cuernavaca-2025-05-30-3908221572840457.jpg
                 const nombreArchivo = property.imagen_url.split('/').pop();
                 imagen = `${API_BASE}/proxy-imagen/${nombreArchivo}`;
             } else if (property.imagen_url && property.imagen_url.startsWith('http')) {
